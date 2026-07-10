@@ -13,19 +13,26 @@
 - [Unit-RollerCAN](https://docs.m5stack.com/en/unit/Unit-RollerCAN)
 - 仓库：[m5stack/M5Unit-Roller](https://github.com/m5stack/M5Unit-Roller)
 
+> **和本仓 `Mower_ui` 的关系：**  
+> - 本文写的是 **官方驱动库 + examples**，不是 LVGL 多页面固件。  
+> - `Mower_ui` 当前用 **I2C**（Port A），本地拷贝在 `Mower_ui/lib/M5UnitRoller/`，  
+>   业务封装为 `MotorService` / **AppMower**，见 **`说明_Mower_ui.md`**。  
+> - 纯串口电机验证工程：`Documents/Codes/Mower`。  
+> - UserDemo 原版页面清单（对照）：**`说明_CoreS3.md`**。
+
 ---
 
-## 1. 工程性质（和 CoreS3-UserDemo 的区别）
+## 1. 工程性质（和 CoreS3-UserDemo / Mower_ui 的区别）
 
-| | CoreS3-UserDemo | M5Unit-Roller |
-|--|-----------------|---------------|
-| 类型 | 完整固件 / 多页面 Demo | **驱动库 + 官方示例** |
-| 入口 | `main.cpp` + PageManager | 各 `examples/**/*.ino` |
-| 应用层 | LVGL 页面 MVC | 示例脚本：`setup`/`loop` 调库 API |
-| 用途 | 主控 UI 与外设演示 | **控制 Roller 电机 / 经总线读写从设备** |
+| | CoreS3-UserDemo | Mower_ui（本 monorepo UI） | M5Unit-Roller |
+|--|-----------------|---------------------------|---------------|
+| 类型 | 完整固件 / 多页面 Demo | UserDemo 裁剪 + **AppMower** | **驱动库 + 官方示例** |
+| 入口 | `main.cpp` + PageManager | 同左 + `MotorService` | 各 `examples/**/*.ino` |
+| 应用层 | LVGL 页面 MVC | 同左，业务在电机服务 | 示例：`setup`/`loop` 调库 API |
+| 用途 | 板级外设演示 | 割草机 UI / 档位与急刹 | **控制 Roller / 总线读写从设备** |
 
-本仓库 **没有** 类似 UserDemo 的「HomeMenu / AppWiFi」多应用壳；  
-「应用」= **examples 目录下的示例程序**。库本体在 `src/`。
+M5Unit-Roller 仓库 **没有**「HomeMenu / AppMower」多应用壳；  
+「应用」= **examples 目录下的示例程序**。库本体在其 `src/`。
 
 ---
 
@@ -361,8 +368,8 @@ src_dir = examples/rs485/motor
 1. 先定总线：**I2C（Port A）** 还是 **RS485（PWR485）**  
 2. 在 `examples` 里找同总线的 **motor** 示例抄起  
 3. 只保留 TTI 需要的：**速度模式 + 限流 + 读反馈 + 保护**  
-4. UI / MQTT 放在 **CoreS3 主工程**，本库只当「电机 Model 层」  
-5. 不要从 `unit_roller485.cpp` 改协议；应用层只调公开 API  
+4. UI 放在 **`Mower_ui`（`MotorService` + AppMower）**，本库只当驱动层  
+5. 不要从 `unit_roller485.cpp` / `unit_rolleri2c.cpp` 改协议；应用层只调公开 API  
 
 ---
 

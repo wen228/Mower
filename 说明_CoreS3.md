@@ -1,6 +1,11 @@
-# CoreS3-UserDemo 应用清单
+# CoreS3-UserDemo 应用清单（上游对照）
 
-路径：`src/pages/`  
+> **文档性质：** 描述 **M5Stack 官方 CoreS3-UserDemo** 的完整演示页清单与 MVC 结构。  
+> **不是** 本仓库 `Mower_ui` 的当前功能表。  
+> 割草机 UI 工程已从 UserDemo 裁剪并增加电机页，请以 **`说明_Mower_ui.md`** 为准。  
+> 电机协议与官方 Roller 示例见 **`说明_Roller485.md`**。
+
+路径（UserDemo 源码语境）：`src/pages/`  
 注册入口：`src/pages/AppFactory.cpp`  
 版本参考：`include/config.h` 中 `DEMO_VERSION`
 
@@ -254,3 +259,12 @@ Port 引脚（见 `include/config.h`，与 CoreS3 / CoreS3-Lite 一致）：
 | 板级配置 / 引脚 | `include/config.h` |
 | 资源池 | `src/res/ResourcePool.h` / `.cpp` |
 | 页面管理器 | `lib/PageManager/` |
+
+---
+
+## 与本 monorepo 其它文档
+
+| 文档 | 内容 |
+|------|------|
+| `说明_Mower_ui.md` | **当前 Mower_ui 工程**（已删 WiFi/Camera/Mic/SD，含 AppMower） |
+| `说明_Roller485.md` | M5Unit-Roller 驱动与 examples |
