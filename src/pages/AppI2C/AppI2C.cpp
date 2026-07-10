@@ -144,8 +144,8 @@ void AppI2C::onEvent(lv_event_t* event) {
             if (obj == instance->View.ui.imgbtn_home) {
                 instance->_Manager->Replace("Pages/HomeMenu");
             } else if (obj == instance->View.ui.imgbtn_next) {
-                USBSerial.print("AppI2C -> AppWiFi\r\n");
-                instance->_Manager->Replace("Pages/AppWiFi");
+                USBSerial.print("AppI2C -> AppRTC\r\n");
+                instance->_Manager->Replace("Pages/AppRTC");
             } else if (obj == instance->View.ui.btn_top_center) {
                 instance->port_index += 1;
                 if (instance->port_index >= 4) {

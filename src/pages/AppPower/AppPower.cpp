@@ -133,8 +133,8 @@ void AppPower::onEvent(lv_event_t* event) {
             } 
         #elif defined(M5CORES3SE)
             else if (obj == instance->View.ui.imgbtn_next) {
-                Serial.println("AppSD");
-                instance->_Manager->Replace("Pages/AppSD");
+                Serial.println("AppIMU");
+                instance->_Manager->Replace("Pages/AppIMU");
             }
         #endif
             

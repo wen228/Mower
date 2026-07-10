@@ -17,7 +17,7 @@ void HomeMenu::onViewLoad() {
 
     View.Create(_root);
 
-    for (size_t i = 0; i < 9; i++) {
+    for (size_t i = 0; i < 5; i++) {
         AttachEvent(View.ui.imgbtn_list[i], LV_EVENT_CLICKED);
     }
 }
@@ -77,43 +77,28 @@ void HomeMenu::onEvent(lv_event_t* event) {
     lv_event_code_t code = lv_event_get_code(event);
 
     if (code == LV_EVENT_CLICKED) {
-        if (obj == instance->View.ui.imgbtn_list[2]) {
-            USBSerial.println("HomeMenu -> AppMic");
-            instance->_Manager->Replace("Pages/AppMic");
-            return;
-        }
         USBSerial.print("HomeMenu -> ");
         M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"),
                            ~0u, 1, 1);
         if (obj == instance->View.ui.imgbtn_list[0]) {
-            USBSerial.println("AppWiFi");
-            instance->_Manager->Replace("Pages/AppWiFi");
-        } 
+            USBSerial.println("AppPower");
+            instance->_Manager->Replace("Pages/AppPower");
+        }
     #if defined(M5CORES3)
         else if (obj == instance->View.ui.imgbtn_list[1]) {
-            USBSerial.println("AppCamera");
-            instance->_Manager->Replace("Pages/AppCamera");
-        }else if (obj == instance->View.ui.imgbtn_list[4]) {
             USBSerial.println("AppIMU");
             instance->_Manager->Replace("Pages/AppIMU");
-        }  
+        }
     #elif defined(M5CORES3SE)
 
     #endif
-        
-        else if (obj == instance->View.ui.imgbtn_list[3]) {
-            USBSerial.println("AppPower");
-            instance->_Manager->Replace("Pages/AppPower");
-        } else if (obj == instance->View.ui.imgbtn_list[5]) {
-            USBSerial.println("AppSD");
-            instance->_Manager->Replace("Pages/AppSD");
-        } else if (obj == instance->View.ui.imgbtn_list[6]) {
+        else if (obj == instance->View.ui.imgbtn_list[2]) {
             USBSerial.println("AppTouch");
             instance->_Manager->Replace("Pages/AppTouch");
-        } else if (obj == instance->View.ui.imgbtn_list[7]) {
+        } else if (obj == instance->View.ui.imgbtn_list[3]) {
             USBSerial.println("AppI2C");
             instance->_Manager->Replace("Pages/AppI2C");
-        } else if (obj == instance->View.ui.imgbtn_list[8]) {
+        } else if (obj == instance->View.ui.imgbtn_list[4]) {
             USBSerial.println("AppRTC");
             instance->_Manager->Replace("Pages/AppRTC");
         }

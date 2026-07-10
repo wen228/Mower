@@ -143,8 +143,8 @@ void AppIMU::onEvent(lv_event_t* event) {
             if (obj == instance->View.ui.imgbtn_home) {
                 instance->_Manager->Replace("Pages/HomeMenu");
             } else if (obj == instance->View.ui.imgbtn_next) {
-                USBSerial.print("AppIMU -> AppSD\r\n");
-                instance->_Manager->Replace("Pages/AppSD");
+                USBSerial.print("AppIMU -> AppTouch\r\n");
+                instance->_Manager->Replace("Pages/AppTouch");
             }
         }
     }
