@@ -48,7 +48,8 @@ void HomeMenuView::Create(lv_obj_t* root) {
         ui.imgbtn_list[i] = nullptr;
     }
 
-    for (size_t i = 0; i < 5; i++)
+    /* First row: Power / IMU / Touch / I2C */
+    for (size_t i = 0; i < 4; i++)
     {
         ui.imgbtn_list[i] = lv_imgbtn_create(root);
         // lv_obj_remove_style_all(ui.imgbtn_list[i]);
@@ -65,6 +66,13 @@ void HomeMenuView::Create(lv_obj_t* root) {
         // lv_obj_set_style_radius(ui.imgbtn_list[i], 0, 0);
         // lv_obj_set_style_border_post(ui.imgbtn_list[i], true, 0);
     }
+
+    /* Sys / RTC: original top-right slot (was list[8] @ 250,10) */
+    ui.imgbtn_list[4] = lv_imgbtn_create(root);
+    lv_obj_set_size(ui.imgbtn_list[4], 60, 73);
+    lv_obj_set_pos(ui.imgbtn_list[4], 250, 10);
+    lv_imgbtn_set_src(ui.imgbtn_list[4], LV_IMGBTN_STATE_PRESSED, NULL, menu_img_pressed_list[4], NULL);
+    lv_imgbtn_set_src(ui.imgbtn_list[4], LV_IMGBTN_STATE_RELEASED, NULL, menu_img_pressed_list[4], NULL);
 }
 
 void HomeMenuView::Delete() {
