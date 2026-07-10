@@ -48,7 +48,7 @@ void HomeMenuView::Create(lv_obj_t* root) {
         ui.imgbtn_list[i] = nullptr;
     }
 
-    /* First row: Power / IMU / Touch / I2C */
+    /* Same layout as before: Power / IMU / Touch / I2C */
     for (size_t i = 0; i < 4; i++)
     {
         ui.imgbtn_list[i] = lv_imgbtn_create(root);
@@ -67,12 +67,22 @@ void HomeMenuView::Create(lv_obj_t* root) {
         // lv_obj_set_style_border_post(ui.imgbtn_list[i], true, 0);
     }
 
+    /* One more app slot (index 4) — same formula as above */
+    ui.btn_mower = lv_btn_create(root);
+    lv_obj_set_size(ui.btn_mower, 60, 73);
+    lv_obj_set_pos(ui.btn_mower, 10 + 80 * (4 % 4), 75 + 80 * (4 / 4));
+    lv_obj_set_style_bg_color(ui.btn_mower, lv_color_hex(0x2E8B57), 0);
+    lv_obj_set_style_radius(ui.btn_mower, 6, 0);
+    lv_obj_t* lab = lv_label_create(ui.btn_mower);
+    lv_label_set_text(lab, "MOWER");
+    lv_obj_center(lab);
+
     /* Sys / RTC: original top-right slot (was list[8] @ 250,10) */
-    ui.imgbtn_list[4] = lv_imgbtn_create(root);
-    lv_obj_set_size(ui.imgbtn_list[4], 60, 73);
-    lv_obj_set_pos(ui.imgbtn_list[4], 250, 10);
-    lv_imgbtn_set_src(ui.imgbtn_list[4], LV_IMGBTN_STATE_PRESSED, NULL, menu_img_pressed_list[4], NULL);
-    lv_imgbtn_set_src(ui.imgbtn_list[4], LV_IMGBTN_STATE_RELEASED, NULL, menu_img_pressed_list[4], NULL);
+    ui.imgbtn_list[5] = lv_imgbtn_create(root);
+    lv_obj_set_size(ui.imgbtn_list[5], 60, 73);
+    lv_obj_set_pos(ui.imgbtn_list[5], 250, 10);
+    lv_imgbtn_set_src(ui.imgbtn_list[5], LV_IMGBTN_STATE_PRESSED, NULL, menu_img_pressed_list[4], NULL);
+    lv_imgbtn_set_src(ui.imgbtn_list[5], LV_IMGBTN_STATE_RELEASED, NULL, menu_img_pressed_list[4], NULL);
 }
 
 void HomeMenuView::Delete() {

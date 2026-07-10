@@ -19,6 +19,7 @@ class HomeMenuView {
     #endif
         
         lv_obj_t* imgbtn_list[9];
+        lv_obj_t* btn_mower;
     } ui;
 
    private:

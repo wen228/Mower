@@ -1,6 +1,7 @@
 #include "PageManager.h"
 #include "res/ResourcePool.h"
 #include "pages/AppFactory.h"
+#include "motor/MotorService.h"
 
 void App_Init() {
     static AppFactory factory;
@@ -54,6 +55,7 @@ void App_Init() {
     /* Initialize pages */
     manager.Install("StartUp", "Pages/StartUp");
     manager.Install("HomeMenu", "Pages/HomeMenu");
+    manager.Install("AppMower", "Pages/AppMower");
     manager.Install("AppPower", "Pages/AppPower");
     manager.Install("AppIMU", "Pages/AppIMU");
     manager.Install("AppTouch", "Pages/AppTouch");
@@ -61,6 +63,8 @@ void App_Init() {
     manager.Install("AppRTC", "Pages/AppRTC");
 
     manager.SetGlobalLoadAnimType(PageManager::LOAD_ANIM_NONE);
+
+    MotorService::begin();
 
     manager.Push("Pages/StartUp");
 }

@@ -23,6 +23,7 @@
 #include "AppFactory.h"
 #include "StartUp/StartUp.h"
 #include "HomeMenu/HomeMenu.h"
+#include "AppMower/AppMower.h"
 #include "AppPower/AppPower.h"
 #include "AppIMU/AppIMU.h"
 #include "AppTouch/AppTouch.h"
@@ -39,6 +40,7 @@
 PageBase* AppFactory::CreatePage(const char* name) {
     APP_CLASS_MATCH(StartUp);
     APP_CLASS_MATCH(HomeMenu);
+    APP_CLASS_MATCH(AppMower);
     APP_CLASS_MATCH(AppPower);
     APP_CLASS_MATCH(AppIMU);
     APP_CLASS_MATCH(AppTouch);

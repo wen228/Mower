@@ -1,0 +1,150 @@
+#include "AppMower.h"
+#include "motor/MotorService.h"
+
+using namespace Page;
+
+AppMower::AppMower() : timer(nullptr) {
+}
+
+AppMower::~AppMower() {
+}
+
+void AppMower::onCustomAttrConfig() {
+    LV_LOG_USER(__func__);
+}
+
+void AppMower::onViewLoad() {
+    LV_LOG_USER(__func__);
+    View.Create(_root);
+    Model.Init();
+
+    AttachEvent(View.ui.imgbtn_home, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.imgbtn_next, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.btn_eco, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.btn_normal, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.btn_turbo, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.btn_toggle, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.btn_estop, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.btn_reset, LV_EVENT_CLICKED);
+}
+
+void AppMower::onViewDidLoad() {
+    LV_LOG_USER(__func__);
+}
+
+void AppMower::onViewWillAppear() {
+    LV_LOG_USER(__func__);
+    timer = lv_timer_create(onTimerUpdate, 200, this);
+    Update();
+}
+
+void AppMower::onViewDidAppear() {
+    LV_LOG_USER(__func__);
+}
+
+void AppMower::onViewWillDisappear() {
+    LV_LOG_USER(__func__);
+}
+
+void AppMower::onViewDidDisappear() {
+    LV_LOG_USER(__func__);
+    lv_timer_del(timer);
+}
+
+void AppMower::onViewUnload() {
+    LV_LOG_USER(__func__);
+    View.Delete();
+}
+
+void AppMower::onViewDidUnload() {
+    LV_LOG_USER(__func__);
+}
+
+void AppMower::AttachEvent(lv_obj_t* obj, lv_event_code_t code) {
+    lv_obj_set_user_data(obj, this);
+    lv_obj_add_event_cb(obj, onEvent, code, this);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+}
+
+void AppMower::Update() {
+    const MotorTelemetry& t = Model.Telem();
+
+    char status[64];
+    if (!t.ready) {
+        snprintf(status, sizeof(status), "NO ROLLER | %s %d%%",
+                 MotorService::gearName(t.gear ? t.gear : GEAR_ECO),
+                 t.gear_pct ? t.gear_pct : SPEED_PCT_ECO);
+    } else if (t.fault) {
+        snprintf(status, sizeof(status), "FAULT | %s %d%% | %s",
+                 MotorService::gearName(t.gear), t.gear_pct,
+                 t.running ? "RUN" : "STOP");
+    } else {
+        snprintf(status, sizeof(status), "%s | %s %d%%",
+                 t.running ? "RUN" : "STOP", MotorService::gearName(t.gear),
+                 t.gear_pct);
+    }
+    lv_label_set_text(View.ui.label_status, status);
+    lv_obj_set_style_text_color(
+        View.ui.label_status,
+        t.fault ? lv_color_hex(0xFF4444)
+                : (t.running ? lv_color_hex(0x00FF88) : lv_color_hex(0xFFCC00)),
+        0);
+
+    char telem[96];
+    snprintf(telem, sizeof(telem), "Spd:%.1f  I:%.1f  Vin:%.2f  Load:%s",
+             t.speed, t.current, t.vin, MotorService::loadName(t.load));
+    lv_label_set_text(View.ui.label_telem, telem);
+
+    if (View.ui.label_toggle) {
+        lv_label_set_text(View.ui.label_toggle,
+                          t.running ? "STOP (running)" : "RUN (stopped)");
+    }
+}
+
+void AppMower::onTimerUpdate(lv_timer_t* timer) {
+    AppMower* instance = (AppMower*)timer->user_data;
+    instance->Update();
+}
+
+void AppMower::onEvent(lv_event_t* event) {
+    AppMower* instance = (AppMower*)lv_event_get_user_data(event);
+    LV_ASSERT_NULL(instance);
+
+    lv_obj_t* obj        = lv_event_get_current_target(event);
+    lv_event_code_t code = lv_event_get_code(event);
+
+    if (code != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    if (obj == instance->View.ui.imgbtn_home) {
+        M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"),
+                           ~0u, 1, 1);
+        instance->_Manager->Replace("Pages/HomeMenu");
+        return;
+    }
+    if (obj == instance->View.ui.imgbtn_next) {
+        M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"),
+                           ~0u, 1, 1);
+        USBSerial.println("AppMower -> AppPower");
+        instance->_Manager->Replace("Pages/AppPower");
+        return;
+    }
+
+    if (obj == instance->View.ui.btn_eco) {
+        MotorService::setGear(GEAR_ECO);
+    } else if (obj == instance->View.ui.btn_normal) {
+        MotorService::setGear(GEAR_NORMAL);
+    } else if (obj == instance->View.ui.btn_turbo) {
+        MotorService::setGear(GEAR_TURBO);
+    } else if (obj == instance->View.ui.btn_toggle) {
+        MotorService::toggle();
+    } else if (obj == instance->View.ui.btn_estop) {
+        MotorService::eStop();
+    } else if (obj == instance->View.ui.btn_reset) {
+        MotorService::clearFault();
+    }
+
+    instance->Update();
+}

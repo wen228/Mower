@@ -17,9 +17,11 @@ void HomeMenu::onViewLoad() {
 
     View.Create(_root);
 
-    for (size_t i = 0; i < 5; i++) {
+    for (size_t i = 0; i < 4; i++) {
         AttachEvent(View.ui.imgbtn_list[i], LV_EVENT_CLICKED);
     }
+    AttachEvent(View.ui.btn_mower, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.imgbtn_list[5], LV_EVENT_CLICKED);
 }
 
 void HomeMenu::onViewDidLoad() {
@@ -98,7 +100,10 @@ void HomeMenu::onEvent(lv_event_t* event) {
         } else if (obj == instance->View.ui.imgbtn_list[3]) {
             USBSerial.println("AppI2C");
             instance->_Manager->Replace("Pages/AppI2C");
-        } else if (obj == instance->View.ui.imgbtn_list[4]) {
+        } else if (obj == instance->View.ui.btn_mower) {
+            USBSerial.println("AppMower");
+            instance->_Manager->Replace("Pages/AppMower");
+        } else if (obj == instance->View.ui.imgbtn_list[5]) {
             USBSerial.println("AppRTC");
             instance->_Manager->Replace("Pages/AppRTC");
         }

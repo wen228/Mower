@@ -12,6 +12,7 @@
 #include "esp_camera.h"
 
 #include "App.h"
+#include "motor/MotorService.h"
 
 void setup() {
     esp_err_t ret = nvs_flash_init();
@@ -21,7 +22,7 @@ void setup() {
         ret = nvs_flash_init();
     }
 
-    USBSerial.begin(15200);
+    USBSerial.begin(115200);
     M5.begin();
 
 #if defined(M5CORES3)
@@ -50,7 +51,8 @@ void setup() {
 }
 
 void loop() {
-
+    MotorService::handleSerial();
+    MotorService::poll();
     lv_timer_handler();
     delay(10);
 }
