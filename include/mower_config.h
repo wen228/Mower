@@ -1,6 +1,8 @@
 #ifndef MOWER_CONFIG_H
 #define MOWER_CONFIG_H
 
+// Align with Mower/include/config.h (CLI business twin).
+
 // ---- Hardware: CoreS3 Lite Port A (I2C) ----
 // Official: SDA = G2, SCL = G1
 #define ROLLER_I2C_ADDR   0x64
@@ -40,13 +42,18 @@
 #define GEAR_NORMAL         2
 #define GEAR_TURBO          3
 
+// ---- Speed slew / soft start (app-layer setpoint ramp) ----
+// Calibrated for LOOP_PERIOD_MS ticks (Mower_poll rate-limits to this).
+#define SPEED_RAMP_UP_STEP     1500
+#define SPEED_RAMP_DOWN_STEP   1500
+#define SPEED_CMD_MIN_EPS      50
+
 // ---- Telemetry scaling (matches official motor.ino) ----
 #define SCALE_SPEED_DIV   100.0f
 #define SCALE_CURRENT_DIV 100.0f
 #define SCALE_VIN_DIV     100.0f
 
 // ---- Load identification (raw current readback units) ----
-// 5V no-load on your log was already I≈45–50 (raw ~4500–5000).
 #if MOWER_PWR_PROFILE == 0
 #define LOAD_LIGHT_MAX_I    6000
 #define LOAD_MEDIUM_MAX_I   10000
@@ -56,9 +63,8 @@
 #define LOAD_MEDIUM_MAX_I   4000
 #define LOAD_STALL_MIN_I    3000
 #endif
-// If |actual_speed| << |target| while current high -> stall-like load
-#define LOAD_STALL_SPEED_RATIO  0.25f   // actual < 25% of target
-#define LOAD_STALL_COUNT_MAX    15      // ~15 * loop period
+#define LOAD_STALL_SPEED_RATIO  0.25f
+#define LOAD_STALL_COUNT_MAX    15
 
 // ---- Loop ----
 #define LOOP_PERIOD_MS    100

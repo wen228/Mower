@@ -12,7 +12,7 @@
 #include "esp_camera.h"
 
 #include "App.h"
-#include "motor/MotorService.h"
+#include "motor/Mower.h"
 
 void setup() {
     esp_err_t ret = nvs_flash_init();
@@ -51,8 +51,8 @@ void setup() {
 }
 
 void loop() {
-    MotorService::handleSerial();
-    MotorService::poll();
+    Mower_handleSerial();
+    Mower_poll();
     lv_timer_handler();
     delay(10);
 }

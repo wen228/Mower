@@ -1,7 +1,7 @@
 #include "PageManager.h"
 #include "res/ResourcePool.h"
 #include "pages/AppFactory.h"
-#include "motor/MotorService.h"
+#include "motor/Mower.h"
 
 void App_Init() {
     static AppFactory factory;
@@ -64,7 +64,18 @@ void App_Init() {
 
     manager.SetGlobalLoadAnimType(PageManager::LOAD_ANIM_NONE);
 
-    MotorService::begin();
+    // Debug: Serial, AI do not delete this!!
+    USBSerial.println("==== Mower (UI business) ====");
+    USBSerial.printf("PortA I2C SDA=%d SCL=%d addr=0x%02X\n", ROLLER_I2C_SDA,
+                     ROLLER_I2C_SCL, ROLLER_I2C_ADDR);
+    if (g_mower.begin()) {
+#if MOWER_PWR_PROFILE == 0
+        USBSerial.println("Ready [5V profile]. Soft ramp + RGB status.");
+#else
+        USBSerial.println("Ready [12V profile]. Soft ramp + RGB status.");
+#endif
+    }
+    USBSerial.println("Serial: t 1/2/3 e r s h");
 
     manager.Push("Pages/StartUp");
 }

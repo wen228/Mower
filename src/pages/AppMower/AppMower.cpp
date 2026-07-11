@@ -1,5 +1,5 @@
 #include "AppMower.h"
-#include "motor/MotorService.h"
+#include "motor/Mower.h"
 
 using namespace Page;
 
@@ -68,37 +68,35 @@ void AppMower::AttachEvent(lv_obj_t* obj, lv_event_code_t code) {
 }
 
 void AppMower::Update() {
-    const MotorTelemetry& t = Model.Telem();
+    const Mower::Status s = Model.status();
+    const int pct = Mower::gearPct(s.gear ? s.gear : GEAR_ECO);
 
     char status[64];
-    if (!t.ready) {
+    if (!s.ready) {
         snprintf(status, sizeof(status), "NO ROLLER | %s %d%%",
-                 MotorService::gearName(t.gear ? t.gear : GEAR_ECO),
-                 t.gear_pct ? t.gear_pct : SPEED_PCT_ECO);
-    } else if (t.fault) {
+                 Mower::gearName(s.gear ? s.gear : GEAR_ECO), pct);
+    } else if (s.fault) {
         snprintf(status, sizeof(status), "FAULT | %s %d%% | %s",
-                 MotorService::gearName(t.gear), t.gear_pct,
-                 t.running ? "RUN" : "STOP");
+                 Mower::gearName(s.gear), pct, s.running ? "RUN" : "STOP");
     } else {
         snprintf(status, sizeof(status), "%s | %s %d%%",
-                 t.running ? "RUN" : "STOP", MotorService::gearName(t.gear),
-                 t.gear_pct);
+                 s.running ? "RUN" : "STOP", Mower::gearName(s.gear), pct);
     }
     lv_label_set_text(View.ui.label_status, status);
     lv_obj_set_style_text_color(
         View.ui.label_status,
-        t.fault ? lv_color_hex(0xFF4444)
-                : (t.running ? lv_color_hex(0x00FF88) : lv_color_hex(0xFFCC00)),
+        s.fault ? lv_color_hex(0xFF4444)
+                : (s.running ? lv_color_hex(0x00FF88) : lv_color_hex(0xFFCC00)),
         0);
 
     char telem[96];
     snprintf(telem, sizeof(telem), "Spd:%.1f  I:%.1f  Vin:%.2f  Load:%s",
-             t.speed, t.current, t.vin, MotorService::loadName(t.load));
+             s.speed, s.current, s.vin, Mower::loadName(s.load));
     lv_label_set_text(View.ui.label_telem, telem);
 
     if (View.ui.label_toggle) {
         lv_label_set_text(View.ui.label_toggle,
-                          t.running ? "STOP (running)" : "RUN (stopped)");
+                          s.running ? "STOP (running)" : "RUN (stopped)");
     }
 }
 
@@ -133,17 +131,17 @@ void AppMower::onEvent(lv_event_t* event) {
     }
 
     if (obj == instance->View.ui.btn_eco) {
-        MotorService::setGear(GEAR_ECO);
+        g_mower.setGear(GEAR_ECO);
     } else if (obj == instance->View.ui.btn_normal) {
-        MotorService::setGear(GEAR_NORMAL);
+        g_mower.setGear(GEAR_NORMAL);
     } else if (obj == instance->View.ui.btn_turbo) {
-        MotorService::setGear(GEAR_TURBO);
+        g_mower.setGear(GEAR_TURBO);
     } else if (obj == instance->View.ui.btn_toggle) {
-        MotorService::toggle();
+        g_mower.toggle();
     } else if (obj == instance->View.ui.btn_estop) {
-        MotorService::eStop();
+        g_mower.eStop();
     } else if (obj == instance->View.ui.btn_reset) {
-        MotorService::clearFault();
+        g_mower.clearFault();
     }
 
     instance->Update();

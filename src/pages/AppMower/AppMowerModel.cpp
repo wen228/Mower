@@ -3,9 +3,9 @@
 using namespace Page;
 
 void AppMowerModel::Init() {
-    /* MotorService::begin() is called once from App_Init */
+    /* g_mower.begin() is called once from App_Init */
 }
 
-const MotorTelemetry& AppMowerModel::Telem() const {
-    return MotorService::telemetry();
+Mower::Status AppMowerModel::status() const {
+    return g_mower.status();
 }
