@@ -56,6 +56,7 @@ void App_Init() {
     manager.Install("StartUp", "Pages/StartUp");
     manager.Install("HomeMenu", "Pages/HomeMenu");
     manager.Install("AppMower", "Pages/AppMower");
+    manager.Install("AppBattery", "Pages/AppBattery");
     manager.Install("AppPower", "Pages/AppPower");
     manager.Install("AppIMU", "Pages/AppIMU");
     manager.Install("AppTouch", "Pages/AppTouch");

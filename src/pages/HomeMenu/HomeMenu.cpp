@@ -17,11 +17,10 @@ void HomeMenu::onViewLoad() {
 
     View.Create(_root);
 
-    for (size_t i = 0; i < 4; i++) {
+    for (size_t i = 0; i < HomeMenuView::GRID_COUNT; i++) {
         AttachEvent(View.ui.imgbtn_list[i], LV_EVENT_CLICKED);
     }
-    AttachEvent(View.ui.btn_mower, LV_EVENT_CLICKED);
-    AttachEvent(View.ui.imgbtn_list[5], LV_EVENT_CLICKED);
+    AttachEvent(View.ui.imgbtn_list[HomeMenuView::SYS_INDEX], LV_EVENT_CLICKED);
 }
 
 void HomeMenu::onViewDidLoad() {
@@ -78,34 +77,37 @@ void HomeMenu::onEvent(lv_event_t* event) {
     lv_obj_t* obj        = lv_event_get_current_target(event);
     lv_event_code_t code = lv_event_get_code(event);
 
-    if (code == LV_EVENT_CLICKED) {
-        USBSerial.print("HomeMenu -> ");
-        M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"),
-                           ~0u, 1, 1);
-        if (obj == instance->View.ui.imgbtn_list[0]) {
-            USBSerial.println("AppPower");
-            instance->_Manager->Replace("Pages/AppPower");
-        }
-    #if defined(M5CORES3)
-        else if (obj == instance->View.ui.imgbtn_list[1]) {
-            USBSerial.println("AppIMU");
-            instance->_Manager->Replace("Pages/AppIMU");
-        }
-    #elif defined(M5CORES3SE)
+    if (code != LV_EVENT_CLICKED) {
+        return;
+    }
 
-    #endif
-        else if (obj == instance->View.ui.imgbtn_list[2]) {
-            USBSerial.println("AppTouch");
-            instance->_Manager->Replace("Pages/AppTouch");
-        } else if (obj == instance->View.ui.imgbtn_list[3]) {
-            USBSerial.println("AppI2C");
-            instance->_Manager->Replace("Pages/AppI2C");
-        } else if (obj == instance->View.ui.btn_mower) {
-            USBSerial.println("AppMower");
-            instance->_Manager->Replace("Pages/AppMower");
-        } else if (obj == instance->View.ui.imgbtn_list[5]) {
-            USBSerial.println("AppRTC");
-            instance->_Manager->Replace("Pages/AppRTC");
+    USBSerial.print("HomeMenu -> ");
+    M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"), ~0u,
+                       1, 1);
+
+    /* Same order as MENU_GRID_IMG / grid slots. */
+    static const char* GRID_PAGES[] = {
+        "Pages/AppPower",
+        "Pages/AppIMU",
+        "Pages/AppTouch",
+        "Pages/AppI2C",
+        "Pages/AppMower",
+        "Pages/AppBattery",
+    };
+    static const char* GRID_NAMES[] = {
+        "AppPower", "AppIMU", "AppTouch", "AppI2C", "AppMower", "AppBattery",
+    };
+
+    for (size_t i = 0; i < HomeMenuView::GRID_COUNT; i++) {
+        if (obj == instance->View.ui.imgbtn_list[i]) {
+            USBSerial.println(GRID_NAMES[i]);
+            instance->_Manager->Replace(GRID_PAGES[i]);
+            return;
         }
+    }
+
+    if (obj == instance->View.ui.imgbtn_list[HomeMenuView::SYS_INDEX]) {
+        USBSerial.println("AppRTC");
+        instance->_Manager->Replace("Pages/AppRTC");
     }
 }

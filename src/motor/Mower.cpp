@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstdio>
 
-// UI shell logs on USB CDC (same port as demo).
 #define MOWER_LOG USBSerial
 
 // RGB565 for UnitRollerI2C::setRGB (same layout as M5 TFT_*).
@@ -81,10 +80,11 @@ bool Mower::begin()
     roller_.setRGBBrightness(MOWER_RGB_BRI);
     roller_.setRGBMode(ROLLER_RGB_MODE_USER_DEFINED);
     last_rgb_ = -1;
+    resetEnergy();
     updateRgb();
 
-    MOWER_LOG.printf("[OK] Mower ready  maxI=%d ramp=%d/%d\n", SPEED_MAX_CURRENT,
-                     SPEED_RAMP_UP_STEP, SPEED_RAMP_DOWN_STEP);
+    MOWER_LOG.printf("[OK] Mower ready  maxI=%d batt=%.0fmAh\n",
+                     SPEED_MAX_CURRENT, (double)BATTERY_CAP_MAH);
     return true;
 }
 
@@ -134,8 +134,8 @@ void Mower::start()
     running_    = true;
     soft_stall_ = 0;
     updateRgb();
-    MOWER_LOG.printf("[START] ramp to %s %d%% tgt=%ld (cmd starts 0)\n",
-                     gearName(gear_), gearPct(gear_), (long)target_);
+    MOWER_LOG.printf("[START] ramp to %s %d%% tgt=%ld\n", gearName(gear_),
+                     gearPct(gear_), (long)target_);
 }
 
 void Mower::toggle()
@@ -189,8 +189,18 @@ void Mower::clearFault()
     if (ready_) {
         updateRgb();
     }
-    MOWER_LOG.println(
-        "[FAULT] cleared; stall protect re-enabled. Press 't' to start.");
+    MOWER_LOG.println("[FAULT] cleared. Press 't' to start. ('b' = full SOC)");
+}
+
+void Mower::resetEnergy()
+{
+    batt_power_w_     = 0;
+    batt_energy_mwh_  = 0;
+    batt_used_mah_    = 0;
+    batt_soc_pct_     = 100.0f;
+    batt_low_ = false;
+    MOWER_LOG.printf("[BATT] reset full  cap=%.0fmAh SOC=100%%\n",
+                     (double)BATTERY_CAP_MAH);
 }
 
 bool Mower::isRamping() const
@@ -235,13 +245,11 @@ Mower::Load Mower::classifyLoad(int32_t speed_rb, int32_t current_rb) const
     const float n_act = fabsf((float)speed_rb);
     const float n_cmd = fabsf((float)cmd_);
     const float i_act = fabsf((float)current_rb);
-
     // High current + actual speed << cmd → stall-like.
     if (n_cmd > 1.0f && i_act >= (float)LOAD_STALL_MIN_I &&
         (n_act / n_cmd) < LOAD_STALL_SPEED_RATIO) {
         return Load::StallLike;
     }
-
     if (i_act <= (float)LOAD_LIGHT_MAX_I) {
         return Load::Light;
     }
@@ -296,7 +304,48 @@ void Mower::update()
         soft_stall_ = 0;
     }
 
+    updatePowerAndBattery(LOOP_PERIOD_MS / 1000.0f);
     updateRgb();
+}
+
+void Mower::updatePowerAndBattery(float dt_s)
+{
+    // vin_ volts; current_ mA (post SCALE_*_DIV)
+    if (dt_s <= 0.0f) {
+        return;
+    }
+
+    const float i_ma = fabsf(current_);
+    const float v    = fabsf(vin_);
+
+    batt_power_w_ = v * (i_ma / 1000.0f);
+    batt_energy_mwh_ += batt_power_w_ * dt_s * 1000.0f / 3600.0f;
+
+    batt_used_mah_ += i_ma * dt_s / 3600.0f;
+    if (batt_used_mah_ < 0.0f) {
+        batt_used_mah_ = 0.0f;
+    }
+    if (batt_used_mah_ > BATTERY_CAP_MAH) {
+        batt_used_mah_ = BATTERY_CAP_MAH;
+    }
+
+    batt_soc_pct_ = 100.0f * (1.0f - batt_used_mah_ / BATTERY_CAP_MAH);
+    if (batt_soc_pct_ < 0.0f) {
+        batt_soc_pct_ = 0.0f;
+    }
+    if (batt_soc_pct_ > 100.0f) {
+        batt_soc_pct_ = 100.0f;
+    }
+
+    batt_low_ = (batt_soc_pct_ <= BATTERY_LOW_SOC_PCT);
+
+#if BATTERY_LOW_LATCH
+    if (batt_low_ && !fault_) {
+        fault_ = true;
+        stop("battery low SOC");
+        MOWER_LOG.printf("[BATT] low SOC=%.1f%% — latched\n", (double)batt_soc_pct_);
+    }
+#endif
 }
 
 void Mower::updateRgb()
@@ -304,7 +353,6 @@ void Mower::updateRgb()
     if (!ready_) {
         return;
     }
-    // fault > elevated load > run (incl. ramp) > idle
     int32_t color = MOWER_RGB_IDLE;
     if (running_) {
         if (load_ == Load::Medium || load_ == Load::Heavy ||
@@ -317,7 +365,6 @@ void Mower::updateRgb()
     if (fault_) {
         color = MOWER_RGB_FAULT;
     }
-
     if (color == last_rgb_) {
         return;
     }
@@ -325,7 +372,6 @@ void Mower::updateRgb()
     last_rgb_ = color;
 }
 
-// Author: Simple status to debug.
 Mower::Status Mower::status() const
 {
     Status s;
@@ -344,10 +390,13 @@ Mower::Status Mower::status() const
     s.load             = load_;
     s.ramping          = isRamping();
     s.soft_stall_count = soft_stall_;
+    s.batt_power_w          = batt_power_w_;
+    s.batt_energy_mwh       = batt_energy_mwh_;
+    s.batt_soc_pct          = batt_soc_pct_;
+    s.batt_used_mah         = batt_used_mah_;
+    s.batt_low      = batt_low_;
     return s;
 }
-
-// ---- Global helpers for main loop ----
 
 void Mower_poll()
 {
@@ -365,14 +414,11 @@ void Mower_poll()
     if (now - last_print_ms >= (uint32_t)PRINT_PERIOD_MS) {
         last_print_ms = now;
         const Mower::Status s = g_mower.status();
-        if (s.running || s.fault) {
+        if (s.running || s.fault || s.batt_low) {
             MOWER_LOG.printf(
-                "run=%d gear=%s(%d%%) tgt=%ld cmd=%ld spd=%.1f I=%.1f "
-                "Vin=%.2f T=%d load=%s err=%u fault=%d ramp=%d\n",
-                s.running ? 1 : 0, Mower::gearName(s.gear), Mower::gearPct(s.gear),
-                (long)s.target_raw, (long)s.cmd_raw, s.speed, s.current, s.vin,
-                s.temp, Mower::loadName(s.load), s.err, s.fault ? 1 : 0,
-                s.ramping ? 1 : 0);
+                "run=%d SOC=%.1f%% P=%.2fW used=%.1fmAh load=%s fault=%d\n",
+                s.running ? 1 : 0, s.batt_soc_pct, s.batt_power_w, s.batt_used_mah,
+                Mower::loadName(s.load), s.fault ? 1 : 0);
         }
     }
 }
@@ -407,27 +453,26 @@ void Mower_handleSerial()
             case 'R':
                 g_mower.clearFault();
                 break;
+            case 'b':
+            case 'B':
+                g_mower.resetEnergy();
+                break;
             case 's':
             case 'S': {
                 const Mower::Status s = g_mower.status();
                 MOWER_LOG.printf(
-                    "run=%d ready=%d gear=%s tgt=%ld cmd=%ld spd=%.1f I=%.1f "
-                    "load=%s fault=%d\n",
-                    s.running ? 1 : 0, s.ready ? 1 : 0, Mower::gearName(s.gear),
-                    (long)s.target_raw, (long)s.cmd_raw, s.speed, s.current,
-                    Mower::loadName(s.load), s.fault ? 1 : 0);
+                    "ready=%d run=%d SOC=%.1f%% P=%.2fW V=%.2f I=%.1f "
+                    "used=%.1f fault=%d low=%d\n",
+                    s.ready ? 1 : 0, s.running ? 1 : 0, s.batt_soc_pct, s.batt_power_w,
+                    s.vin, s.current, s.batt_used_mah, s.fault ? 1 : 0,
+                    s.batt_low ? 1 : 0);
                 break;
             }
             case 'h':
             case 'H':
             case '?':
                 MOWER_LOG.println("---- Mower (UI) ----");
-                MOWER_LOG.println("  t/space : toggle");
-                MOWER_LOG.println("  1/2/3   : Eco/Normal/Turbo");
-                MOWER_LOG.println("  e       : E-STOP");
-                MOWER_LOG.println("  r       : reset fault");
-                MOWER_LOG.println("  s       : status");
-                MOWER_LOG.println("  h       : help");
+                MOWER_LOG.println("  t 1/2/3 e r b s h");
                 break;
             default:
                 break;

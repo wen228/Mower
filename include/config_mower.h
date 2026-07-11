@@ -1,5 +1,5 @@
-#ifndef MOWER_CONFIG_H
-#define MOWER_CONFIG_H
+#ifndef CONFIG_MOWER_H
+#define CONFIG_MOWER_H
 
 // Align with Mower/include/config.h (CLI business twin).
 
@@ -80,4 +80,4 @@
 #define SYS_RUNNING       1
 #define SYS_ERROR         2
 
-#endif  // MOWER_CONFIG_H
+#endif  // CONFIG_MOWER_H

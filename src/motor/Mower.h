@@ -1,12 +1,8 @@
 /**
  * Mower — app-layer motor business (CoreS3 + Unit Roller I2C)
+ * Twin of CLI Mower/; UI uses g_mower + Mower_poll / Mower_handleSerial.
  *
- * Same class as CLI Mower/ project. UI uses global g_mower + Mower_poll /
- * Mower_handleSerial (USBSerial).
- *
- * Actions: start/stop/toggle/setGear/eStop/clearFault
- * Per-loop: update()  (ramp + telemetry + stall + status RGB)
- * Read:     status()
+ * config: config_mower.h + config_battery.h
  */
 #ifndef MOWER_H
 #define MOWER_H
@@ -14,7 +10,8 @@
 #include <Arduino.h>
 #include <cstdint>
 
-#include "mower_config.h"
+#include "config_mower.h"
+#include "config_battery.h"
 #include "unit_rolleri2c.hpp"
 
 class Mower {
@@ -31,18 +28,23 @@ public:
         bool ready;
         bool running;
         bool fault;
-        int gear;  // 1=Eco 2=Normal 3=Turbo
+        int gear;
         int32_t target_raw;
         int32_t cmd_raw;
         float speed;
-        float current;
-        float vin;
+        float current;  // mA post-scale
+        float vin;      // volts
         int temp;
         uint8_t err;
         uint8_t sys;
         Load load;
         bool ramping;
         int soft_stall_count;
+        float batt_power_w; 
+        float batt_energy_mwh;
+        float batt_soc_pct;
+        float batt_used_mah;
+        bool batt_low;
     };
 
     bool begin();
@@ -52,8 +54,9 @@ public:
     void stop(const char* reason = nullptr);
     void toggle();
     void setGear(int gear);
-    void eStop();  // hard stop + fault latch (UI button / serial 'e')
+    void eStop();
     void clearFault();
+    void resetEnergy();
 
     Status status() const;
 
@@ -64,13 +67,13 @@ public:
 private:
     UnitRollerI2C roller_;
 
-    bool ready_    = false;
-    bool running_  = false;
-    bool fault_    = false;
-    bool mode_ok_  = false;
-    int gear_      = GEAR_ECO;
+    bool ready_   = false;
+    bool running_ = false;
+    bool fault_   = false;
+    bool mode_ok_ = false;
+    int gear_     = GEAR_ECO;
     int32_t target_ = SPEED_GEAR_ECO;
-    int32_t cmd_   = 0;
+    int32_t cmd_  = 0;
     int soft_stall_ = 0;
 
     float speed_   = 0;
@@ -81,6 +84,12 @@ private:
     uint8_t sys_   = 0;
     Load load_     = Load::Off;
 
+    float batt_power_w_    = 0;
+    float batt_energy_mwh_ = 0;
+    float batt_used_mah_   = 0;
+    float batt_soc_pct_    = 100.0f;
+    bool batt_low_ = false;
+
     int32_t last_rgb_ = -1;
 
     void ensureSpeedMode();
@@ -88,15 +97,12 @@ private:
     bool isRamping() const;
     Load classifyLoad(int32_t speed_rb, int32_t current_rb) const;
     void updateRgb();
+    void updatePowerAndBattery(float dt_s);
     static int32_t speedForGear(int g);
 };
 
-// Global instance for App + main loop (one Roller).
 extern Mower g_mower;
-
-// Rate-limited update (~LOOP_PERIOD_MS) + optional status print.
 void Mower_poll();
-// USBSerial CLI: t/1/2/3/e/r/s/h
 void Mower_handleSerial();
 
 #endif  // MOWER_H

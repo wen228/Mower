@@ -5,25 +5,25 @@
 using namespace Page;
 
 /*
-    width: 60px
-    height: 73px
+    Menu tile: 60 x 73
+    Grid: x = 10 + 80 * (i % 4), y = 75 + 80 * (i / 4)
 */
 
-
-
-
 LV_IMG_DECLARE(menu_power);
-
 #if defined(M5CORES3)
-    LV_IMG_DECLARE(menu_imu);
+LV_IMG_DECLARE(menu_imu);
 #elif defined(M5CORES3SE)
-    LV_IMG_DECLARE(menu_imu_se);
+LV_IMG_DECLARE(menu_imu_se);
 #endif
 LV_IMG_DECLARE(menu_touch);
 LV_IMG_DECLARE(menu_i2c);
+/* UserDemo bitmaps reused as placeholders (not Mic/WiFi features). */
+LV_IMG_DECLARE(menu_mic);
+LV_IMG_DECLARE(menu_wifi);
 LV_IMG_DECLARE(menu_sys);
 
-static const lv_img_dsc_t* menu_img_pressed_list[] = {
+/* Order = AppPower / IMU / Touch / I2C / Mower / Battery */
+static const lv_img_dsc_t* MENU_GRID_IMG[] = {
     &menu_power,
 #if defined(M5CORES3)
     &menu_imu,
@@ -32,7 +32,8 @@ static const lv_img_dsc_t* menu_img_pressed_list[] = {
 #endif
     &menu_touch,
     &menu_i2c,
-    &menu_sys,
+    &menu_mic,   /* AppMower  — temporary icon asset */
+    &menu_wifi,  /* AppBattery — temporary icon asset */
 };
 
 void HomeMenuView::Create(lv_obj_t* root) {
@@ -48,41 +49,26 @@ void HomeMenuView::Create(lv_obj_t* root) {
         ui.imgbtn_list[i] = nullptr;
     }
 
-    /* Same layout as before: Power / IMU / Touch / I2C */
-    for (size_t i = 0; i < 4; i++)
-    {
+    /* Main grid: Power / IMU / Touch / I2C / Mower / Battery */
+    for (size_t i = 0; i < GRID_COUNT; i++) {
         ui.imgbtn_list[i] = lv_imgbtn_create(root);
-        // lv_obj_remove_style_all(ui.imgbtn_list[i]);
         lv_obj_set_size(ui.imgbtn_list[i], 60, 73);
-        lv_obj_set_pos(ui.imgbtn_list[i], 10 + 80 * (i % 4), 75 + 80 * (i / 4));
-
-
-        lv_imgbtn_set_src(ui.imgbtn_list[i], LV_IMGBTN_STATE_PRESSED, NULL, menu_img_pressed_list[i], NULL);
-        lv_imgbtn_set_src(ui.imgbtn_list[i], LV_IMGBTN_STATE_RELEASED, NULL, menu_img_pressed_list[i], NULL);
-
-        // lv_obj_set_style_border_color(ui.imgbtn_list[i], lv_color_hex(0xff00ff), 0);
-        // lv_obj_set_style_border_side(ui.imgbtn_list[i], LV_BORDER_SIDE_FULL, 0);
-        // lv_obj_set_style_border_width(ui.imgbtn_list[i], 1, 0);
-        // lv_obj_set_style_radius(ui.imgbtn_list[i], 0, 0);
-        // lv_obj_set_style_border_post(ui.imgbtn_list[i], true, 0);
+        lv_obj_set_pos(ui.imgbtn_list[i], 10 + 80 * (int)(i % 4),
+                       75 + 80 * (int)(i / 4));
+        lv_imgbtn_set_src(ui.imgbtn_list[i], LV_IMGBTN_STATE_PRESSED, NULL,
+                          MENU_GRID_IMG[i], NULL);
+        lv_imgbtn_set_src(ui.imgbtn_list[i], LV_IMGBTN_STATE_RELEASED, NULL,
+                          MENU_GRID_IMG[i], NULL);
     }
 
-    /* One more app slot (index 4) — same formula as above */
-    ui.btn_mower = lv_btn_create(root);
-    lv_obj_set_size(ui.btn_mower, 60, 73);
-    lv_obj_set_pos(ui.btn_mower, 10 + 80 * (4 % 4), 75 + 80 * (4 / 4));
-    lv_obj_set_style_bg_color(ui.btn_mower, lv_color_hex(0x2E8B57), 0);
-    lv_obj_set_style_radius(ui.btn_mower, 6, 0);
-    lv_obj_t* lab = lv_label_create(ui.btn_mower);
-    lv_label_set_text(lab, "MOWER");
-    lv_obj_center(lab);
-
-    /* Sys / RTC: original top-right slot (was list[8] @ 250,10) */
-    ui.imgbtn_list[5] = lv_imgbtn_create(root);
-    lv_obj_set_size(ui.imgbtn_list[5], 60, 73);
-    lv_obj_set_pos(ui.imgbtn_list[5], 250, 10);
-    lv_imgbtn_set_src(ui.imgbtn_list[5], LV_IMGBTN_STATE_PRESSED, NULL, menu_img_pressed_list[4], NULL);
-    lv_imgbtn_set_src(ui.imgbtn_list[5], LV_IMGBTN_STATE_RELEASED, NULL, menu_img_pressed_list[4], NULL);
+    /* Sys / RTC — original top-right slot */
+    ui.imgbtn_list[SYS_INDEX] = lv_imgbtn_create(root);
+    lv_obj_set_size(ui.imgbtn_list[SYS_INDEX], 60, 73);
+    lv_obj_set_pos(ui.imgbtn_list[SYS_INDEX], 250, 10);
+    lv_imgbtn_set_src(ui.imgbtn_list[SYS_INDEX], LV_IMGBTN_STATE_PRESSED, NULL,
+                      &menu_sys, NULL);
+    lv_imgbtn_set_src(ui.imgbtn_list[SYS_INDEX], LV_IMGBTN_STATE_RELEASED, NULL,
+                      &menu_sys, NULL);
 }
 
 void HomeMenuView::Delete() {

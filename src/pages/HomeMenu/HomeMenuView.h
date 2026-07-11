@@ -10,21 +10,21 @@ class HomeMenuView {
     void Create(lv_obj_t* root);
     void Delete();
 
+    /** Grid slots 0..5 + Sys/RTC at index 8 (top-right). */
+    static const size_t GRID_COUNT = 6;
+    static const size_t SYS_INDEX  = 8;
+
    public:
     struct {
-    #if defined(M5CORES3)
+#if defined(M5CORES3)
         lv_obj_t* img_bg;
-    #elif defined(M5CORES3SE)
+#elif defined(M5CORES3SE)
         lv_obj_t* img_bg_se;
-    #endif
-        
+#endif
         lv_obj_t* imgbtn_list[9];
-        lv_obj_t* btn_mower;
     } ui;
-
-   private:
 };
 
 }  // namespace Page
 
-#endif  // !__VIEW_H
+#endif
