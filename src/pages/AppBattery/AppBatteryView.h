@@ -12,9 +12,10 @@ class AppBatteryView {
 
    public:
     struct {
+        lv_obj_t* img_bg;
         lv_obj_t* imgbtn_home;
         lv_obj_t* imgbtn_next;
-        lv_obj_t* label_title;
+        lv_obj_t* label_title; /* unused while reusing Power banner art */
         lv_obj_t* label_soc;
         lv_obj_t* bar_soc;
         lv_obj_t* label_telem;

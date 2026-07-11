@@ -17,8 +17,7 @@ LV_IMG_DECLARE(menu_imu_se);
 #endif
 LV_IMG_DECLARE(menu_touch);
 LV_IMG_DECLARE(menu_i2c);
-/* UserDemo bitmaps reused as placeholders (not Mic/WiFi features). */
-LV_IMG_DECLARE(menu_mic);
+/* Dummy icon for AppMower / AppBattery until custom assets arrive. */
 LV_IMG_DECLARE(menu_wifi);
 LV_IMG_DECLARE(menu_sys);
 
@@ -32,8 +31,8 @@ static const lv_img_dsc_t* MENU_GRID_IMG[] = {
 #endif
     &menu_touch,
     &menu_i2c,
-    &menu_mic,   /* AppMower  — temporary icon asset */
-    &menu_wifi,  /* AppBattery — temporary icon asset */
+    &menu_wifi, /* AppMower  — dummy (WiFi asset) */
+    &menu_wifi, /* AppBattery — dummy (WiFi asset) */
 };
 
 void HomeMenuView::Create(lv_obj_t* root) {
