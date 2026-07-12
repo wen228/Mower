@@ -1,7 +1,7 @@
 /**
- * EzData2 short-session MQTT: fleet snapshot (soc / used_mAh / running).
- * First upload uses requestType 100 (create fields); later 101 (update).
- * Fire-and-forget after short flush — no GET, no multi-second RX wait.
+ * EzData2: MQTT fleet snapshot + HTTP CSV file upload (§3.2).
+ * MQTT: start + interval, short flush, no GET.
+ * HTTP: STOP path via uploadLogFile (multipart); no wait for cmd 105.
  */
 #ifndef EZDATA2_CLIENT_H
 #define EZDATA2_CLIENT_H
@@ -13,12 +13,18 @@ public:
     void begin();
     void poll();
     bool uploadNow();
+    /** POST SD CSV while card still mounted. path e.g. /mower_01.csv */
+    bool uploadLogFile(const char* path);
 
 private:
     bool ensureWifi_();
     bool publishStatusSnapshot_();
     bool publishField_(const char* name, const char* value, bool dump_json);
+    bool mqttConnectSession_();
+    bool mqttPublishRaw_(const char* json);
     void mqttPump_(uint32_t ms);
+    void verifyUploadedFile_();
+    void httpGetUrlProbe_(const char* url);
 
     bool began_              = false;
     bool last_running_       = false;

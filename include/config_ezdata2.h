@@ -33,3 +33,11 @@
 #define EZ2_WIFI_TIMEOUT_MS  15000
 #define EZ2_FLUSH_MS         500
 #define EZ2_UPLOAD_INTERVAL_MS  (60UL * 1000UL)
+
+/* Official HTTP file upload (EzData2 §3.2) — CSV after SD STOP */
+#define EZ2_FILE_UPLOAD_URL  "https://ezdata2.m5stack.com/api/v2/device/uploadDeviceFile"
+#define EZ2_FILE_UPLOAD_HOST "ezdata2.m5stack.com"
+#define EZ2_FILE_UPLOAD_PATH "/api/v2/device/uploadDeviceFile"
+#define EZ2_HTTP_TIMEOUT_MS  30000
+/* After CSV POST: wait MQTT cmd105 + 104 GET deviceFile (verify only) */
+#define EZ2_FILE_VERIFY_MS   2500

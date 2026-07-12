@@ -6,6 +6,7 @@
 #include "sd/SdMount.h"
 #include "motor/Mower.h"
 #include "config_mower.h"
+#include "cloud/EzData2Client.h"
 
 SdLogger g_sd_logger;
 
@@ -39,6 +40,10 @@ bool SdLogger::start() {
 
 void SdLogger::stop() {
     closeFile();
+    /* Upload while SD still mounted (unmount would block open). */
+    if (path_[0] != '\0' && lines_ > 0) {
+        g_ez2.uploadLogFile(path_);
+    }
     if (held_mount_) {
         SdUnmount();
         held_mount_ = false;
