@@ -60,24 +60,9 @@ void SdLogger::toggle() {
 }
 
 uint16_t SdLogger::nextFileIndex() {
-    uint16_t max_n = 0;
-    File root = SD.open("/");
-    if (!root) {
-        return 1;
-    }
-    File f = root.openNextFile();
-    while (f) {
-        const char* name = f.name();
-        const char* base = strrchr(name, '/');
-        base = base ? base + 1 : name;
-        unsigned n = 0;
-        if (sscanf(base, "mower_%u.csv", &n) == 1 && n > max_n && n < 1000) {
-            max_n = (uint16_t)n;
-        }
-        f = root.openNextFile();
-    }
-    root.close();
-    return (uint16_t)(max_n + 1);
+    /* Ring 1..99: after 99 comes 1 (overwrite that slot). */
+    file_idx_ = (uint16_t)((file_idx_ % kMaxFiles) + 1);
+    return file_idx_;
 }
 
 bool SdLogger::openNewFile() {
@@ -85,12 +70,10 @@ bool SdLogger::openNewFile() {
         return true;
     }
 
-    file_idx_ = nextFileIndex();
-    if (file_idx_ == 0 || file_idx_ > 999) {
-        file_idx_ = 1;
-    }
-
-    snprintf(path_, sizeof(path_), "/mower_%03u.csv", (unsigned)file_idx_);
+    nextFileIndex();
+    snprintf(path_, sizeof(path_), "/mower_%02u.csv", (unsigned)file_idx_);
+    /* FILE_WRITE truncates; remove first so old size never confuses list tools. */
+    SD.remove(path_);
     file_ = SD.open(path_, FILE_WRITE);
     if (!file_) {
         snprintf(status_, sizeof(status_), "Log: open fail");
