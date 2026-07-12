@@ -14,6 +14,7 @@
 #include "App.h"
 #include "motor/Mower.h"
 #include "sd/SdLogger.h"
+#include "cloud/EzData2Client.h"
 
 void setup() {
     esp_err_t ret = nvs_flash_init();
@@ -49,12 +50,14 @@ void setup() {
     m5gfx_lvgl_init();
 
     App_Init();
+    g_ez2.begin(); /* token empty → cloud skip until config filled */
 }
 
 void loop() {
     Mower_handleSerial();
     Mower_poll();
-    g_sd_logger.poll(); /* auto CSV while Mower running (if Log enabled) */
+    g_sd_logger.poll();
+    g_ez2.poll(); /* start edge + every 60s: soc / used_mAh / running */
     lv_timer_handler();
     delay(10);
 }

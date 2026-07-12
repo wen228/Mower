@@ -415,10 +415,14 @@ void Mower_poll()
         last_print_ms = now;
         const Mower::Status s = g_mower.status();
         if (s.running || s.fault || s.batt_low) {
+            /* ~11 fields from Status for serial debug (one line) */
             MOWER_LOG.printf(
-                "run=%d SOC=%.1f%% P=%.2fW used=%.1fmAh load=%s fault=%d\n",
-                s.running ? 1 : 0, s.batt_soc_pct, s.batt_power_w, s.batt_used_mah,
-                Mower::loadName(s.load), s.fault ? 1 : 0);
+                "run=%d rpm=%.1f tgt=%ld gear=%d I=%.1f V=%.2f P=%.2fW "
+                "soc=%.1f%% used=%.1fmAh load=%s fault=%d ramp=%d\n",
+                s.running ? 1 : 0, (double)s.speed, (long)s.target_raw, s.gear,
+                (double)s.current, (double)s.vin, (double)s.batt_power_w,
+                (double)s.batt_soc_pct, (double)s.batt_used_mah,
+                Mower::loadName(s.load), s.fault ? 1 : 0, s.ramping ? 1 : 0);
         }
     }
 }

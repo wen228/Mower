@@ -10,10 +10,10 @@
 
 | 优先级 | 内容 |
 |--------|------|
-| **Must** | 短连接 MQTT；约 5 min `poll`；config（WiFi/token/mac）；串口日志；`Status` 主字段批量 101；网页先建字段；`main` 挂 `g_ez2.poll()` |
-| **Should** | `uploadNow()`；上传前 WiFi 检查；与 SD REC 独立 |
-| **Could** | 上传结果 UI / 立即上传按钮；NVS 存 token；次要字段（如 `err`/`sys`/`energy`） |
-| **Won't** | 长连接常驻；WebSocket；板端 down/103·104 查询；多级故障码表/历史；Node-RED；改电机逻辑；高频实时遥测 |
+| **Must** | 短连接 MQTT；**SD 录制 STOP 后上传** Status 快照；config（WiFi/token/mac）；串口日志；主字段批量 101；网页先建字段 |
+| **Should** | `uploadNow()` 调试；上传前 WiFi 检查 |
+| **Could** | 上传结果 UI；NVS 存 token；次要字段（`err`/`sys`/`energy`） |
+| **Won't** | **5 min 定时**；长连接；WebSocket；板端查询；故障码表/历史；Node-RED；改电机；高频实时 |
 
 字段原则：`Mower::Status` 有展示价值的尽量传；`fault` 只镜像 bool `"0"`/`"1"`，不单独做故障码体系。
 
@@ -41,7 +41,7 @@
 |----|------|
 | 传输 | **MQTT 3.1.1**（不用 WebSocket） |
 | 连接策略 | **短连接**：需要上传时 `connect → publish → disconnect`，**不** 24h 长连 |
-| 上传周期 | 约 **5 分钟** 一次（可配置）；非实时 |
+| 上传触发 | **每次 SD REC→STOP 之后** 传一份 Status（非 5 min 定时） |
 | 注册/绑定 | **人工完成**；固件写死 `deviceToken` + MAC（或 NVS）；板端可不含 register HTTP |
 | 字段 | 最小集合（见 §4）；网页端先建好字段，板端主要用 **101 修改** |
 | 下行/查询 | demo **可不实现** 板端解析 down；展示靠网页控制台 |
