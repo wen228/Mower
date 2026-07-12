@@ -89,14 +89,16 @@ void AppMower::Update() {
                 : (s.running ? lv_color_hex(0x00FF88) : lv_color_hex(0xFFCC00)),
         0);
 
-    char telem[96];
-    snprintf(telem, sizeof(telem), "Spd:%.1f  I:%.1f  Vin:%.2f  Load:%s",
-             s.speed, s.current, s.vin, Mower::loadName(s.load));
+    char telem[128];
+    snprintf(telem, sizeof(telem),
+             "Spd:%.1f  I:%.1f  Vin:%.2f\nLoad:%s  P:%.2fW  SOC:%.0f%%",
+             s.speed, s.current, s.vin, Mower::loadName(s.load), s.batt_power_w,
+             s.batt_soc_pct);
     lv_label_set_text(View.ui.label_telem, telem);
 
+    /* Short labels — RUN/E-STOP/Reset share one row. */
     if (View.ui.label_toggle) {
-        lv_label_set_text(View.ui.label_toggle,
-                          s.running ? "STOP (running)" : "RUN (stopped)");
+        lv_label_set_text(View.ui.label_toggle, s.running ? "STOP" : "RUN");
     }
 }
 

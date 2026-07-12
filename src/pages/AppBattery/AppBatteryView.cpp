@@ -1,4 +1,5 @@
 #include "AppBatteryView.h"
+#include "font/lv_font.h"
 
 using namespace Page;
 
@@ -67,8 +68,8 @@ void AppBatteryView::Create(lv_obj_t* root) {
     lv_obj_set_pos(ui.label_warn, 20, kBannerH + 148);
 
     ui.btn_full = lv_btn_create(root);
-    lv_obj_set_size(ui.btn_full, 140, 36);
-    lv_obj_align(ui.btn_full, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_set_size(ui.btn_full, 110, 30);
+    lv_obj_align(ui.btn_full, LV_ALIGN_BOTTOM_RIGHT, -12, -10);
     lv_obj_set_style_bg_color(ui.btn_full, lv_color_hex(0x3A5FCD), 0);
     lv_obj_set_style_radius(ui.btn_full, 6, 0);
     lv_obj_t* lab = lv_label_create(ui.btn_full);

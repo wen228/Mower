@@ -52,32 +52,34 @@ void AppMowerView::Create(lv_obj_t* root) {
     /* Title is inside Power banner art; keep slot unused for now. */
     ui.label_title = nullptr;
 
+    /* Status + telemetry (room for 2-line telem). */
     ui.label_status = lv_label_create(root);
     lv_label_set_text(ui.label_status, "STOP | Eco 30%");
     lv_obj_set_style_text_color(ui.label_status, lv_color_hex(0x1A7A4C), 0);
-    lv_obj_set_pos(ui.label_status, 12, kBannerH + 8);
+    lv_obj_set_pos(ui.label_status, 12, kBannerH + 6);
 
     ui.label_telem = lv_label_create(root);
-    lv_label_set_text(ui.label_telem, "Spd:--  I:--  Vin:--  Load:--");
-    lv_obj_set_style_text_color(ui.label_telem, lv_color_hex(0x444444), 0);
-    lv_obj_set_pos(ui.label_telem, 12, kBannerH + 28);
+    lv_label_set_text(ui.label_telem, "Spd:--  I:--  Vin:--\nLoad:--  P:--  SOC:--");
+    lv_obj_set_style_text_color(ui.label_telem, lv_color_hex(0x333333), 0);
+    lv_obj_set_pos(ui.label_telem, 12, kBannerH + 24);
 
+    /* Gear row */
     lv_color_t gear_bg = lv_color_hex(0x3A5FCD);
-    ui.btn_eco    = makeBtn(root, "Eco", 94, 36, gear_bg);
-    ui.btn_normal = makeBtn(root, "Normal", 94, 36, gear_bg);
-    ui.btn_turbo  = makeBtn(root, "Turbo", 94, 36, gear_bg);
-    lv_obj_set_pos(ui.btn_eco, 12, kBannerH + 52);
-    lv_obj_set_pos(ui.btn_normal, 113, kBannerH + 52);
-    lv_obj_set_pos(ui.btn_turbo, 214, kBannerH + 52);
+    ui.btn_eco    = makeBtn(root, "Eco", 94, 34, gear_bg);
+    ui.btn_normal = makeBtn(root, "Normal", 94, 34, gear_bg);
+    ui.btn_turbo  = makeBtn(root, "Turbo", 94, 34, gear_bg);
+    lv_obj_set_pos(ui.btn_eco, 12, kBannerH + 62);
+    lv_obj_set_pos(ui.btn_normal, 113, kBannerH + 62);
+    lv_obj_set_pos(ui.btn_turbo, 214, kBannerH + 62);
 
-    ui.btn_toggle = makeBtn(root, "RUN / STOP", 296, 40, lv_color_hex(0x2E8B57));
-    lv_obj_set_pos(ui.btn_toggle, 12, kBannerH + 96);
+    /* RUN / E-STOP / Reset on one row (short labels). */
+    ui.btn_toggle = makeBtn(root, "RUN", 96, 38, lv_color_hex(0x2E8B57));
+    ui.btn_estop  = makeBtn(root, "E-STOP", 96, 38, lv_color_hex(0xCC2222));
+    ui.btn_reset  = makeBtn(root, "Reset", 96, 38, lv_color_hex(0x666666));
+    lv_obj_set_pos(ui.btn_toggle, 12, kBannerH + 108);
+    lv_obj_set_pos(ui.btn_estop, 112, kBannerH + 108);
+    lv_obj_set_pos(ui.btn_reset, 212, kBannerH + 108);
     ui.label_toggle = lv_obj_get_child(ui.btn_toggle, 0);
-
-    ui.btn_estop = makeBtn(root, "E-STOP", 142, 36, lv_color_hex(0xCC2222));
-    ui.btn_reset = makeBtn(root, "Reset", 142, 36, lv_color_hex(0x666666));
-    lv_obj_set_pos(ui.btn_estop, 12, kBannerH + 144);
-    lv_obj_set_pos(ui.btn_reset, 166, kBannerH + 144);
 }
 
 void AppMowerView::Delete() {
