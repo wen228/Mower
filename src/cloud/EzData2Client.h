@@ -1,7 +1,7 @@
 /**
  * EzData2 short-session MQTT: fleet snapshot (soc / used_mAh / running).
  * First upload uses requestType 100 (create fields); later 101 (update).
- * Debug: dump SOC TX JSON, print /down RX, then 104 GET soc.
+ * Fire-and-forget after short flush — no GET, no multi-second RX wait.
  */
 #ifndef EZDATA2_CLIENT_H
 #define EZDATA2_CLIENT_H
@@ -18,7 +18,6 @@ private:
     bool ensureWifi_();
     bool publishStatusSnapshot_();
     bool publishField_(const char* name, const char* value, bool dump_json);
-    bool publishGet_(const char* name);
     void mqttPump_(uint32_t ms);
 
     bool began_              = false;

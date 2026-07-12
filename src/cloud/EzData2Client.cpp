@@ -81,7 +81,7 @@ bool EzData2Client::uploadNow() {
         begin();
     }
     if (EZ2_DEVICE_TOKEN[0] == '\0' || EZ2_MAC_NO_COLON[0] == '\0') {
-        USBSerial.println("[EZ2] skip");
+        USBSerial.println("[EZ2] skip: empty token/mac (need config_ezdata2_secrets.h)");
         return false;
     }
     return publishStatusSnapshot_();
@@ -89,22 +89,31 @@ bool EzData2Client::uploadNow() {
 
 bool EzData2Client::ensureWifi_() {
     if (WiFi.status() == WL_CONNECTED) {
+        USBSerial.printf("[EZ2] wifi already ip=%s rssi=%d\n",
+                         WiFi.localIP().toString().c_str(), WiFi.RSSI());
         return true;
     }
     if (EZ2_WIFI_SSID[0] == '\0') {
+        USBSerial.println("[EZ2] wifi skip: empty SSID (secrets missing?)");
         return false;
     }
 
+    USBSerial.printf("[EZ2] wifi connecting ssid=%s ...\n", EZ2_WIFI_SSID);
     WiFi.mode(WIFI_STA);
     WiFi.begin(EZ2_WIFI_SSID, EZ2_WIFI_PASS);
 
     const uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED) {
         if (millis() - t0 > EZ2_WIFI_TIMEOUT_MS) {
+            USBSerial.printf("[EZ2] wifi fail timeout %ums status=%d\n",
+                             (unsigned)EZ2_WIFI_TIMEOUT_MS, (int)WiFi.status());
             return false;
         }
         delay(200);
     }
+    USBSerial.printf("[EZ2] wifi ok ip=%s rssi=%d ms=%u\n",
+                     WiFi.localIP().toString().c_str(), WiFi.RSSI(),
+                     (unsigned)(millis() - t0));
     return true;
 }
 
@@ -146,26 +155,6 @@ bool EzData2Client::publishField_(const char* name, const char* value,
     }
     delay(40);
     s_mqtt.loop();
-    return true;
-}
-
-bool EzData2Client::publishGet_(const char* name) {
-    StaticJsonDocument<192> doc;
-    doc["deviceToken"]         = EZ2_DEVICE_TOKEN;
-    doc["body"]["name"]        = name;
-    doc["body"]["requestType"] = 104;
-
-    char buf[192];
-    const size_t n = serializeJson(doc, buf, sizeof(buf));
-    if (n == 0 || n >= sizeof(buf)) {
-        return false;
-    }
-    USBSerial.printf("[EZ2] TX json(soc 104 GET)=%s\n", buf);
-    if (!s_mqtt.publish(s_topic_up, buf)) {
-        USBSerial.println("[EZ2] fail pub GET");
-        return false;
-    }
-    delay(40);
     return true;
 }
 
@@ -221,26 +210,21 @@ bool EzData2Client::publishStatusSnapshot_() {
         ok = false;
     }
 
-    USBSerial.println("[EZ2] wait RX after pub...");
-    mqttPump_(2000);
+    /* Short flush only — no multi-second wait, no 104 GET (demo latency). */
+    mqttPump_(EZ2_FLUSH_MS);
 
-    /* If create (100) got code 200, mark ready for next time 101 */
-    if (!fields_created_ && s_last_rx_ok && strstr(s_last_rx, "\"code\":200")) {
-        fields_created_ = true;
-        USBSerial.println("[EZ2] fields created → next upload uses 101");
-    }
-    /* If already existed, server may return 500 on 100; user can create on web.
-     * Also: if 101 got 200, fields exist. */
+    /* Prefer RX code:200 if it arrived in the flush window. */
     if (s_last_rx_ok && strstr(s_last_rx, "\"code\":200") &&
         (strstr(s_last_rx, "\"cmd\":100") || strstr(s_last_rx, "\"cmd\":101"))) {
+        if (!fields_created_) {
+            USBSerial.println("[EZ2] fields ok → next upload uses 101");
+        }
         fields_created_ = true;
+    } else if (ok && !fields_created_) {
+        /* Pubs succeeded; assume create landed (fields already on web in demo). */
+        fields_created_ = true;
+        USBSerial.println("[EZ2] pubs ok → next upload uses 101");
     }
-
-    if (!publishGet_("soc")) {
-        ok = false;
-    }
-    USBSerial.println("[EZ2] wait RX after GET...");
-    mqttPump_(2000);
 
     s_mqtt.disconnect();
     USBSerial.printf("[EZ2] %s\n", ok ? "ok" : "fail pub");

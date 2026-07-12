@@ -4,3 +4,6 @@
 compile_commands.json
 
 .DS_Store
+
+# Local secrets (WiFi / EzData token) — never commit
+include/config_ezdata2_secrets.h
