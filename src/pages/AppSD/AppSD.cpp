@@ -101,14 +101,25 @@ void AppSD::ListSDCard(fs::FS& fs, const char* dirname, uint8_t levels) {
 void AppSD::Update() {
     if (Model.IsSDCardExist()) {
         if (!Model.GetInitFlag()) {
+            /* Throttle retries — hammering SPI every 100ms makes recovery worse. */
+            static uint32_t last_try_ms = 0;
+            const uint32_t now = millis();
+            if (now - last_try_ms < 1500) { // Wen: Good to limit reading rate.
+                return;
+            }
+            last_try_ms = now;
+
             lv_obj_clean(View.ui.file_list);
             lv_label_set_text(View.ui.label_notice,
                               "Reinitialize the SD Card...");
             lv_obj_clear_flag(View.ui.label_notice, LV_OBJ_FLAG_HIDDEN);
+            Model.SDDeinit();
             if (!Model.SDInit()) {
                 lv_label_set_text(View.ui.label_notice,
                                   "SD Card initialization failed!\r\nPlease "
                                   "try reinsert SD card...");
+            } else {
+                scan_flag = true;
             }
         } else {
             lv_label_set_text(View.ui.label_notice, "SD Card is ready");
