@@ -24,15 +24,17 @@ class AppSDModel {
     bool IsSDCardExist();
 
     /**
-     * Read CSV (mower log format), keep last CSV_VIEW_MAX data rows.
-     * Each out_lines[i] is compact UI: "ms tgt rpm I run fault".
-     * @return true if file opened (n may be 0 if empty).
+     * Read CSV into internal static-sized buffers (not on call stack).
+     * UI lines: "ms tgt rpm I run fault", last CSV_VIEW_MAX rows.
      */
-    bool ReadCsvTail50(const char* path, char out_lines[][CSV_LINE_LEN],
-                       int* out_n);
+    bool ReadCsvTail50(const char* path);
+    int viewLineCount() const { return view_n_; }
+    const char* viewLine(int i) const;
 
    private:
     bool init_flag = false;
+    int view_n_    = 0;
+    char view_lines_[CSV_VIEW_MAX][CSV_LINE_LEN];
 };
 
 }  // namespace Page

@@ -157,9 +157,7 @@ void AppSD::EnterCsvView(const char* path) {
         return;
     }
 
-    char lines[CSV_VIEW_MAX][CSV_LINE_LEN];
-    int n = 0;
-    if (!Model.ReadCsvTail50(path, lines, &n)) {
+    if (!Model.ReadCsvTail50(path)) {
         lv_label_set_text(View.ui.label_notice, "Open CSV failed");
         lv_obj_clear_flag(View.ui.label_notice, LV_OBJ_FLAG_HIDDEN);
         return;
@@ -174,19 +172,20 @@ void AppSD::EnterCsvView(const char* path) {
     lv_obj_clean(View.ui.file_list);
     lv_obj_add_flag(View.ui.label_notice, LV_OBJ_FLAG_HIDDEN);
 
-    /* title + header + rows */
+    /* title + header + rows (data lives in Model, not on stack) */
     lv_obj_t* t = lv_label_create(View.ui.file_list);
     lv_label_set_text_fmt(t, "%s  (tap title=back)", path);
     lv_obj_t* h = lv_label_create(View.ui.file_list);
     lv_label_set_text(h, "ms   tgt  rpm   I   r f");
 
+    const int n = Model.viewLineCount();
     if (n == 0) {
         lv_obj_t* empty = lv_label_create(View.ui.file_list);
         lv_label_set_text(empty, "(no data rows)");
     } else {
         for (int i = 0; i < n; i++) {
             lv_obj_t* lab = lv_label_create(View.ui.file_list);
-            lv_label_set_text(lab, lines[i]);
+            lv_label_set_text(lab, Model.viewLine(i));
         }
     }
 }
