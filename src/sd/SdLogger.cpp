@@ -5,6 +5,7 @@
 
 #include "sd/SdMount.h"
 #include "motor/Mower.h"
+#include "config_mower.h"
 
 SdLogger g_sd_logger;
 
@@ -81,7 +82,8 @@ bool SdLogger::openNewFile() {
         return false;
     }
 
-    file_.println("ms,rpm,current_mA,power_W,gear,running,fault");
+    file_.println(
+        "ms,tgt,rpm,current_mA,power_W,gear,running,fault,load,temp");
     file_.flush();
     file_open_ = true;
     lines_     = 0;
@@ -95,10 +97,11 @@ void SdLogger::writeRow() {
         return;
     }
     const Mower::Status s = g_mower.status();
-    file_.printf("%lu,%.1f,%.1f,%.2f,%d,%d,%d\n",
-                 (unsigned long)millis(), (double)s.speed, (double)s.current,
-                 (double)s.batt_power_w, s.gear, s.running ? 1 : 0,
-                 s.fault ? 1 : 0);
+    const float tgt = (float)s.target_raw / SCALE_SPEED_DIV;
+    file_.printf("%lu,%.1f,%.1f,%.1f,%.2f,%d,%d,%d,%d,%d\n",
+                 (unsigned long)millis(), (double)tgt, (double)s.speed,
+                 (double)s.current, (double)s.batt_power_w, s.gear,
+                 s.running ? 1 : 0, s.fault ? 1 : 0, (int)s.load, s.temp);
     lines_++;
     if ((lines_ % 10) == 0) {
         file_.flush();

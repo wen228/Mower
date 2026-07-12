@@ -25,6 +25,8 @@ class AppSD : public PageBase {
     virtual void onViewDidUnload();
 
    private:
+    enum Mode { ModeBrowse = 0, ModeView = 1 };
+
     void Update();
     void AttachEvent(lv_obj_t* obj) {
         AttachEvent(obj, LV_EVENT_ALL);
@@ -32,13 +34,19 @@ class AppSD : public PageBase {
     void AttachEvent(lv_obj_t* obj, lv_event_code_t code);
     static void onTimerUpdate(lv_timer_t* timer);
     static void onEvent(lv_event_t* event);
+    static void onFileClick(lv_event_t* event);
 
     void ListSDCard(fs::FS& fs, const char* dirname, uint8_t levels);
+    void EnterCsvView(const char* path);
+    void ExitCsvView();
+    void SetBrowseChrome(bool browse);
 
    private:
     AppSDView View;
     AppSDModel Model;
     lv_timer_t* timer;
+    Mode mode_ = ModeBrowse;
+    char view_path_[24] = "";
 };
 
 }  // namespace Page

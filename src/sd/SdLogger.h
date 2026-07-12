@@ -1,6 +1,7 @@
 /**
  * Manual SD CSV logger (REC / STOP).
- * Columns: ms,rpm,current_mA,power_W,gear,running,fault
+ * Full columns for offline/MQTT; M5 UI may show a subset.
+ * ms,tgt,rpm,current_mA,power_W,gear,running,fault,load,temp
  */
 #ifndef SD_LOGGER_H
 #define SD_LOGGER_H
