@@ -19,9 +19,10 @@ LV_IMG_DECLARE(menu_touch);
 LV_IMG_DECLARE(menu_i2c);
 /* Dummy icon for AppMower / AppBattery until custom assets arrive. */
 LV_IMG_DECLARE(menu_wifi);
+LV_IMG_DECLARE(menu_sd);
 LV_IMG_DECLARE(menu_sys);
 
-/* Order = AppPower / IMU / Touch / I2C / Mower / Battery */
+/* Order = AppPower / IMU / Touch / I2C / Mower / Battery / SD */
 static const lv_img_dsc_t* MENU_GRID_IMG[] = {
     &menu_power,
 #if defined(M5CORES3)
@@ -33,6 +34,7 @@ static const lv_img_dsc_t* MENU_GRID_IMG[] = {
     &menu_i2c,
     &menu_wifi, /* AppMower  — dummy (WiFi asset) */
     &menu_wifi, /* AppBattery — dummy (WiFi asset) */
+    &menu_sd,   /* AppSD */
 };
 
 void HomeMenuView::Create(lv_obj_t* root) {
@@ -48,7 +50,7 @@ void HomeMenuView::Create(lv_obj_t* root) {
         ui.imgbtn_list[i] = nullptr;
     }
 
-    /* Main grid: Power / IMU / Touch / I2C / Mower / Battery */
+    /* Main grid: Power / IMU / Touch / I2C / Mower / Battery / SD */
     for (size_t i = 0; i < GRID_COUNT; i++) {
         ui.imgbtn_list[i] = lv_imgbtn_create(root);
         lv_obj_set_size(ui.imgbtn_list[i], 60, 73);

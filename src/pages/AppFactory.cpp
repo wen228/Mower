@@ -29,6 +29,7 @@
 #include "AppIMU/AppIMU.h"
 #include "AppTouch/AppTouch.h"
 #include "AppI2C/AppI2C.h"
+#include "AppSD/AppSD.h"
 #include "AppRTC/AppRTC.h"
 
 #define APP_CLASS_MATCH(className)           \
@@ -47,6 +48,7 @@ PageBase* AppFactory::CreatePage(const char* name) {
     APP_CLASS_MATCH(AppIMU);
     APP_CLASS_MATCH(AppTouch);
     APP_CLASS_MATCH(AppI2C);
+    APP_CLASS_MATCH(AppSD);
     APP_CLASS_MATCH(AppRTC);
 
     return nullptr;

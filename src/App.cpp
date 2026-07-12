@@ -61,6 +61,7 @@ void App_Init() {
     manager.Install("AppIMU", "Pages/AppIMU");
     manager.Install("AppTouch", "Pages/AppTouch");
     manager.Install("AppI2C", "Pages/AppI2C");
+    manager.Install("AppSD", "Pages/AppSD");
     manager.Install("AppRTC", "Pages/AppRTC");
 
     manager.SetGlobalLoadAnimType(PageManager::LOAD_ANIM_NONE);

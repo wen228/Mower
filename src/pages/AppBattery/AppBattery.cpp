@@ -140,8 +140,8 @@ void AppBattery::onEvent(lv_event_t* event) {
     if (obj == instance->View.ui.imgbtn_next) {
         M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"),
                            ~0u, 1, 1);
-        USBSerial.println("AppBattery -> AppPower");
-        instance->_Manager->Replace("Pages/AppPower");
+        USBSerial.println("AppBattery -> AppSD");
+        instance->_Manager->Replace("Pages/AppSD");
         return;
     }
     if (obj == instance->View.ui.btn_full) {

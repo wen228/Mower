@@ -93,9 +93,11 @@ void HomeMenu::onEvent(lv_event_t* event) {
         "Pages/AppI2C",
         "Pages/AppMower",
         "Pages/AppBattery",
+        "Pages/AppSD",
     };
     static const char* GRID_NAMES[] = {
-        "AppPower", "AppIMU", "AppTouch", "AppI2C", "AppMower", "AppBattery",
+        "AppPower", "AppIMU", "AppTouch", "AppI2C",
+        "AppMower", "AppBattery", "AppSD",
     };
 
     for (size_t i = 0; i < HomeMenuView::GRID_COUNT; i++) {

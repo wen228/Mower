@@ -10,8 +10,8 @@ class HomeMenuView {
     void Create(lv_obj_t* root);
     void Delete();
 
-    /** Grid slots 0..5 + Sys/RTC at index 8 (top-right). */
-    static const size_t GRID_COUNT = 6;
+    /** Grid slots 0..6 + Sys/RTC at index 8 (top-right). */
+    static const size_t GRID_COUNT = 7;
     static const size_t SYS_INDEX  = 8;
 
    public:
