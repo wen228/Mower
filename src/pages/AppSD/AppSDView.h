@@ -20,6 +20,10 @@ class AppSDView {
         lv_obj_t* cont_file;
         lv_obj_t* file_list;
         lv_obj_t* label_notice;
+
+        lv_obj_t* btn_log;
+        lv_obj_t* label_log;
+        lv_obj_t* label_log_btn;
     } ui;
 
    private:
@@ -27,4 +31,4 @@ class AppSDView {
 
 }  // namespace Page
 
-#endif  // !__VIEW_H
+#endif

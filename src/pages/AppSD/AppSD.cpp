@@ -1,5 +1,7 @@
 #include "AppSD.h"
 
+#include "sd/SdLogger.h"
+
 using namespace Page;
 
 AppSD::AppSD() : timer(nullptr) {
@@ -24,6 +26,16 @@ void AppSD::onViewLoad() {
     AttachEvent(View.ui.imgbtn_home, LV_EVENT_CLICKED);
     AttachEvent(View.ui.imgbtn_next, LV_EVENT_CLICKED);
     AttachEvent(View.ui.btn_top_center, LV_EVENT_CLICKED);
+    AttachEvent(View.ui.btn_log, LV_EVENT_CLICKED);
+
+    lv_label_set_text(View.ui.label_log_btn,
+                      g_sd_logger.isRecording() ? "STOP" : "REC");
+    lv_obj_set_style_bg_color(View.ui.btn_log,
+                              g_sd_logger.isRecording()
+                                  ? lv_color_hex(0xCC2222)
+                                  : lv_color_hex(0x2E8B57),
+                              0);
+    lv_label_set_text(View.ui.label_log, g_sd_logger.statusText());
 }
 
 void AppSD::onViewDidLoad() {
@@ -32,7 +44,7 @@ void AppSD::onViewDidLoad() {
 
 void AppSD::onViewWillAppear() {
     LV_LOG_USER(__func__);
-    timer = lv_timer_create(onTimerUpdate, 100, this);
+    timer = lv_timer_create(onTimerUpdate, 200, this);
 }
 
 void AppSD::onViewDidAppear() {
@@ -53,7 +65,7 @@ void AppSD::onViewUnload() {
 
     View.Delete();
     scan_flag = true;
-    Model.SDDeinit();
+    Model.SDDeinit(); /* ref-count: keeps mount if logger holds a ref */
 }
 
 void AppSD::onViewDidUnload() {
@@ -92,19 +104,27 @@ void AppSD::ListSDCard(fs::FS& fs, const char* dirname, uint8_t levels) {
         } else {
             lv_obj_t* label = lv_label_create(View.ui.file_list);
             lv_label_set_text_fmt(label, "  F: %-24.24s %05dKB", file.name(),
-                                  file.size());
+                                  (int)(file.size() / 1024));
         }
         file = root.openNextFile();
     }
 }
 
 void AppSD::Update() {
+    lv_label_set_text(View.ui.label_log, g_sd_logger.statusText());
+    lv_label_set_text(View.ui.label_log_btn,
+                      g_sd_logger.isRecording() ? "STOP" : "REC");
+    lv_obj_set_style_bg_color(View.ui.btn_log,
+                              g_sd_logger.isRecording()
+                                  ? lv_color_hex(0xCC2222)
+                                  : lv_color_hex(0x2E8B57),
+                              0);
+
     if (Model.IsSDCardExist()) {
         if (!Model.GetInitFlag()) {
-            /* Throttle retries — hammering SPI every 100ms makes recovery worse. */
             static uint32_t last_try_ms = 0;
             const uint32_t now = millis();
-            if (now - last_try_ms < 1500) { // Wen: Good to limit reading rate.
+            if (now - last_try_ms < 1500) {
                 return;
             }
             last_try_ms = now;
@@ -141,7 +161,6 @@ void AppSD::Update() {
 
 void AppSD::onTimerUpdate(lv_timer_t* timer) {
     AppSD* instance = (AppSD*)timer->user_data;
-
     instance->Update();
 }
 
@@ -162,6 +181,18 @@ void AppSD::onEvent(lv_event_t* event) {
             instance->_Manager->Replace("Pages/AppPower");
         } else if (obj == instance->View.ui.btn_top_center) {
             instance->scan_flag = true;
+        } else if (obj == instance->View.ui.btn_log) {
+            g_sd_logger.toggle(); /* manual REC / STOP */
+            instance->scan_flag = true; /* refresh list after stop */
+            lv_label_set_text(instance->View.ui.label_log,
+                              g_sd_logger.statusText());
+            lv_label_set_text(instance->View.ui.label_log_btn,
+                              g_sd_logger.isRecording() ? "STOP" : "REC");
+            lv_obj_set_style_bg_color(instance->View.ui.btn_log,
+                                      g_sd_logger.isRecording()
+                                          ? lv_color_hex(0xCC2222)
+                                          : lv_color_hex(0x2E8B57),
+                                      0);
         }
     }
 }

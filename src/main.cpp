@@ -13,6 +13,7 @@
 
 #include "App.h"
 #include "motor/Mower.h"
+#include "sd/SdLogger.h"
 
 void setup() {
     esp_err_t ret = nvs_flash_init();
@@ -53,6 +54,7 @@ void setup() {
 void loop() {
     Mower_handleSerial();
     Mower_poll();
+    g_sd_logger.poll(); /* auto CSV while Mower running (if Log enabled) */
     lv_timer_handler();
     delay(10);
 }
