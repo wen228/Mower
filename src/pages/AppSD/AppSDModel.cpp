@@ -98,7 +98,8 @@ bool AppSDModel::ReadCsvTail50(const char* path) {
                 continue;
             }
         }
-        snprintf(s_ring[w], CSV_LINE_LEN, "%lu %.0f %.0f %.0f %d %d", ms,
+        /* Fixed-width spaces only (default font, no extra typeface). */
+        snprintf(s_ring[w], CSV_LINE_LEN, "%6lu %4.0f %4.0f %4.0f %3d %5d", ms,
                  (double)tgt, (double)rpm, (double)cur, run, fault);
         w = (w + 1) % CSV_VIEW_MAX;
         if (count < CSV_VIEW_MAX) {

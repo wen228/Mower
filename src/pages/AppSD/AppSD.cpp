@@ -176,7 +176,7 @@ void AppSD::EnterCsvView(const char* path) {
     lv_obj_t* t = lv_label_create(View.ui.file_list);
     lv_label_set_text_fmt(t, "%s  (tap title=back)", path);
     lv_obj_t* h = lv_label_create(View.ui.file_list);
-    lv_label_set_text(h, "ms   tgt  rpm   I   r f");
+    lv_label_set_text(h, "    ms  tgt  rpm    I run fault");
 
     const int n = Model.viewLineCount();
     if (n == 0) {
