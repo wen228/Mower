@@ -1,7 +1,8 @@
 /**
  * EzData2: MQTT fleet snapshot + HTTP CSV file upload (§3.2).
  * MQTT: start + interval, short flush, no GET.
- * HTTP: STOP path via uploadLogFile (multipart); no wait for cmd 105.
+ * HTTP: STOP → multipart POST only. verifyUploadedFile_/httpGetUrlProbe_ kept
+ * for other MCUs / manual use — not called from upload path.
  */
 #ifndef EZDATA2_CLIENT_H
 #define EZDATA2_CLIENT_H

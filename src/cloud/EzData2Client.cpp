@@ -495,20 +495,12 @@ bool EzData2Client::uploadLogFile(const char* path) {
         return false;
     }
 
-    /* Subscribe before POST so cmd105 is less likely to be missed. */
-    s_last_rx_ok  = false;
-    s_last_rx[0]  = '\0';
-    s_file105_ok  = false;
-    s_file105_rx[0] = '\0';
-    const bool mqtt_up = mqttConnectSession_();
-    if (!mqtt_up) {
-        USBSerial.println("[EZ2] file warn: mqtt down (upload still tried)");
-    }
-
     /*
      * multipart/form-data (EzData2 §3.2).
      * Doc lists deviceToken + file; server also requires form field "name"
      * (error: 名称不能为空). Use CSV basename as the cloud file name.
+     * Business path: POST only. Do not call verifyUploadedFile_() here
+     * (MQTT 104 / OSS GET stay as library helpers for other ports).
      */
     static const char kBoundary[] = "----MowerEz2Boundary";
 
@@ -521,9 +513,6 @@ bool EzData2Client::uploadLogFile(const char* path) {
         kBoundary, EZ2_DEVICE_TOKEN);
     if (token_n <= 0 || token_n >= (int)sizeof(token_part)) {
         f.close();
-        if (mqtt_up) {
-            s_mqtt.disconnect();
-        }
         USBSerial.println("[EZ2] file fail token part");
         return false;
     }
@@ -538,9 +527,6 @@ bool EzData2Client::uploadLogFile(const char* path) {
         kBoundary, base);
     if (name_n <= 0 || name_n >= (int)sizeof(name_part)) {
         f.close();
-        if (mqtt_up) {
-            s_mqtt.disconnect();
-        }
         USBSerial.println("[EZ2] file fail name part");
         return false;
     }
@@ -554,9 +540,6 @@ bool EzData2Client::uploadLogFile(const char* path) {
         kBoundary, base);
     if (head_n <= 0 || head_n >= (int)sizeof(file_head)) {
         f.close();
-        if (mqtt_up) {
-            s_mqtt.disconnect();
-        }
         USBSerial.println("[EZ2] file fail file head");
         return false;
     }
@@ -566,9 +549,6 @@ bool EzData2Client::uploadLogFile(const char* path) {
         snprintf(tail, sizeof(tail), "\r\n--%s--\r\n", kBoundary);
     if (tail_n <= 0 || tail_n >= (int)sizeof(tail)) {
         f.close();
-        if (mqtt_up) {
-            s_mqtt.disconnect();
-        }
         return false;
     }
 
@@ -584,9 +564,6 @@ bool EzData2Client::uploadLogFile(const char* path) {
     USBSerial.printf("[EZ2] file HTTPS %s ...\n", EZ2_FILE_UPLOAD_HOST);
     if (!client.connect(EZ2_FILE_UPLOAD_HOST, 443)) {
         f.close();
-        if (mqtt_up) {
-            s_mqtt.disconnect();
-        }
         USBSerial.println("[EZ2] file fail connect");
         return false;
     }
@@ -613,16 +590,10 @@ bool EzData2Client::uploadLogFile(const char* path) {
         if (w != (size_t)n) {
             f.close();
             client.stop();
-            if (mqtt_up) {
-                s_mqtt.disconnect();
-            }
             USBSerial.println("[EZ2] file fail write body");
             return false;
         }
         sent += w;
-        if (mqtt_up) {
-            s_mqtt.loop(); /* keep MQTT alive during large body */
-        }
     }
     f.close();
     client.write((const uint8_t*)tail, (size_t)tail_n);
@@ -636,7 +607,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
     const uint32_t t0 = millis();
     int status = -1;
     bool headers_done = false;
-    char json_body[192];
+    char json_body[256];
     size_t jn = 0;
     json_body[0] = '\0';
 
@@ -644,16 +615,10 @@ bool EzData2Client::uploadLogFile(const char* path) {
         if (millis() - t0 > EZ2_HTTP_TIMEOUT_MS) {
             USBSerial.println("[EZ2] file fail timeout resp");
             client.stop();
-            if (mqtt_up) {
-                s_mqtt.disconnect();
-            }
             return false;
         }
         if (!client.available()) {
             delay(10);
-            if (mqtt_up) {
-                s_mqtt.loop();
-            }
             continue;
         }
         if (!headers_done) {
@@ -688,17 +653,13 @@ bool EzData2Client::uploadLogFile(const char* path) {
     /* Transport 200 is not enough — API uses body.code (200 ok, 500 fail). */
     const bool biz_fail =
         (strstr(json_body, "\"code\":500") != nullptr) ||
-        (strstr(json_body, "\"code\": 500") != nullptr) ||
-        (strstr(json_body, "fail") != nullptr);
+        (strstr(json_body, "\"code\": 500") != nullptr);
     const bool biz_ok =
         (strstr(json_body, "\"code\":200") != nullptr) ||
         (strstr(json_body, "\"code\": 200") != nullptr);
     const bool http_ok = (status == 200) && biz_ok && !biz_fail;
 
     if (!http_ok) {
-        if (mqtt_up) {
-            s_mqtt.disconnect();
-        }
         USBSerial.println("[EZ2] file fail (need body code 200; see body above)");
         return false;
     }
@@ -706,7 +667,6 @@ bool EzData2Client::uploadLogFile(const char* path) {
     snprintf(s_last_upload_name, sizeof(s_last_upload_name), "%s", base);
     USBSerial.printf("[EZ2] file HTTP ok bytes=%u name=%s\n",
                      (unsigned)file_size, base);
-    /* Verify cloud copy via MQTT 105 / 104 + optional URL GET */
-    verifyUploadedFile_();
+    /* intentionally not: verifyUploadedFile_(); */
     return true;
 }
