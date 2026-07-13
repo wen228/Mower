@@ -106,8 +106,8 @@ void AppTouch::onEvent(lv_event_t* event) {
         if (obj == instance->View.ui.imgbtn_home) {
             instance->_Manager->Replace("Pages/HomeMenu");
         } else if (obj == instance->View.ui.imgbtn_next) {
-            USBSerial.print("AppTouch -> AppI2C\r\n");
-            instance->_Manager->Replace("Pages/AppI2C");
+            USBSerial.print("AppTouch -> AppMower\r\n");
+            instance->_Manager->Replace("Pages/AppMower");
         } else if (obj == instance->View.ui.btn_top_center) {
             M5.Display.fillRect(0, 68, 320, 172, TFT_WHITE);
             instance->ClearTouchPoint();

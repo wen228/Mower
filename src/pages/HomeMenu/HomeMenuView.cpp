@@ -22,8 +22,12 @@ LV_IMG_DECLARE(menu_wifi);
 LV_IMG_DECLARE(menu_sd);
 LV_IMG_DECLARE(menu_sys);
 
-/* Order = AppPower / IMU / Touch / I2C / Mower / Battery / SD */
+/* Order = Mower / Battery / SD / SelfCheck(I2C) / Power / IMU / Touch */
 static const lv_img_dsc_t* MENU_GRID_IMG[] = {
+    &menu_wifi, /* AppMower  — dummy (WiFi asset) */
+    &menu_wifi, /* AppBattery — dummy (WiFi asset) */
+    &menu_sd,   /* AppSD */
+    &menu_i2c,  /* Self-check */
     &menu_power,
 #if defined(M5CORES3)
     &menu_imu,
@@ -31,10 +35,6 @@ static const lv_img_dsc_t* MENU_GRID_IMG[] = {
     &menu_imu_se,
 #endif
     &menu_touch,
-    &menu_i2c,
-    &menu_wifi, /* AppMower  — dummy (WiFi asset) */
-    &menu_wifi, /* AppBattery — dummy (WiFi asset) */
-    &menu_sd,   /* AppSD */
 };
 
 void HomeMenuView::Create(lv_obj_t* root) {
@@ -50,7 +50,7 @@ void HomeMenuView::Create(lv_obj_t* root) {
         ui.imgbtn_list[i] = nullptr;
     }
 
-    /* Main grid: Power / IMU / Touch / I2C / Mower / Battery / SD */
+    /* Main grid: Mower / Battery / SD / SelfCheck / Power / IMU / Touch */
     for (size_t i = 0; i < GRID_COUNT; i++) {
         ui.imgbtn_list[i] = lv_imgbtn_create(root);
         lv_obj_set_size(ui.imgbtn_list[i], 60, 73);

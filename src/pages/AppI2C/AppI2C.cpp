@@ -136,8 +136,8 @@ void AppI2C::onEvent(lv_event_t* event) {
         return;
     }
     if (obj == instance->View.ui.imgbtn_next) {
-        USBSerial.println("AppI2C(SelfCheck) -> AppMower");
-        instance->_Manager->Replace("Pages/AppMower");
+        USBSerial.println("AppI2C(SelfCheck) -> AppPower");
+        instance->_Manager->Replace("Pages/AppPower");
         return;
     }
     if (obj == instance->View.ui.btn_recheck) {

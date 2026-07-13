@@ -325,8 +325,8 @@ void AppSD::onEvent(lv_event_t* event) {
         return;
     }
     if (obj == instance->View.ui.imgbtn_next) {
-        USBSerial.print("AppSD -> AppPower\r\n");
-        instance->_Manager->Replace("Pages/AppPower");
+        USBSerial.print("AppSD -> AppI2C\r\n");
+        instance->_Manager->Replace("Pages/AppI2C");
         return;
     }
 

@@ -87,17 +87,17 @@ void HomeMenu::onEvent(lv_event_t* event) {
 
     /* Same order as MENU_GRID_IMG / grid slots. */
     static const char* GRID_PAGES[] = {
-        "Pages/AppPower",
-        "Pages/AppIMU",
-        "Pages/AppTouch",
-        "Pages/AppI2C",
         "Pages/AppMower",
         "Pages/AppBattery",
         "Pages/AppSD",
+        "Pages/AppI2C",
+        "Pages/AppPower",
+        "Pages/AppIMU",
+        "Pages/AppTouch",
     };
     static const char* GRID_NAMES[] = {
-        "AppPower", "AppIMU", "AppTouch", "AppI2C",
-        "AppMower", "AppBattery", "AppSD",
+        "AppMower", "AppBattery", "AppSD", "AppI2C",
+        "AppPower", "AppIMU", "AppTouch",
     };
 
     for (size_t i = 0; i < HomeMenuView::GRID_COUNT; i++) {
