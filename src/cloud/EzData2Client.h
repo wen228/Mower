@@ -1,6 +1,7 @@
 /**
  * EzData2: MQTT fleet snapshot + HTTP CSV file upload (§3.2).
- * MQTT: start + interval, short flush, no GET.
+ * WiFi: kick at boot (begin), non-blocking poll/retry — never stall UI.
+ * MQTT: start + interval, short flush, no GET. Fail → skip, no hang.
  * HTTP: STOP → multipart POST only. verifyUploadedFile_/httpGetUrlProbe_ kept
  * for other MCUs / manual use — not called from upload path.
  */
@@ -18,6 +19,8 @@ public:
     bool uploadLogFile(const char* path);
 
 private:
+    void wifiKick_();
+    void wifiPoll_();
     bool ensureWifi_();
     bool publishStatusSnapshot_();
     bool publishField_(const char* name, const char* value, bool dump_json);
@@ -31,6 +34,11 @@ private:
     bool last_running_       = false;
     bool fields_created_     = false; /* after first successful 100s */
     uint32_t last_upload_ms_ = 0;
+
+    bool wifi_started_       = false;
+    bool wifi_logged_ok_     = false;
+    uint32_t wifi_attempt_ms_ = 0;
+    uint32_t wifi_retry_ms_   = 0;
 };
 
 extern EzData2Client g_ez2;

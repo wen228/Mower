@@ -54,12 +54,79 @@ void EzData2Client::begin() {
     last_running_   = false;
     last_upload_ms_ = 0;
     /* fields_created_ stays false until first 100 cycle succeeds */
+
+    /* Boot: start STA join immediately; connection finishes in wifiPoll_ (loop). */
+    wifiKick_();
+}
+
+void EzData2Client::wifiKick_() {
+    if (EZ2_WIFI_SSID[0] == '\0') {
+        USBSerial.println("[EZ2] wifi skip: empty SSID (secrets missing?)");
+        wifi_started_ = false;
+        return;
+    }
+
+    USBSerial.printf("[EZ2] wifi start ssid=%s (non-block)\n", EZ2_WIFI_SSID);
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(EZ2_WIFI_SSID, EZ2_WIFI_PASS);
+    wifi_started_     = true;
+    wifi_logged_ok_   = false;
+    wifi_attempt_ms_  = millis();
+    wifi_retry_ms_    = 0;
+}
+
+void EzData2Client::wifiPoll_() {
+    if (EZ2_WIFI_SSID[0] == '\0') {
+        return;
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        if (!wifi_logged_ok_) {
+            USBSerial.printf("[EZ2] wifi ok ip=%s rssi=%d\n",
+                             WiFi.localIP().toString().c_str(), WiFi.RSSI());
+            wifi_logged_ok_ = true;
+        }
+        wifi_started_ = true;
+        return;
+    }
+
+    /* Dropped after a successful join — let auto-reconnect try; re-kick on timeout. */
+    if (wifi_logged_ok_) {
+        USBSerial.println("[EZ2] wifi lost");
+        wifi_logged_ok_  = false;
+        wifi_attempt_ms_ = millis();
+        wifi_started_    = true;
+    }
+
+    if (!wifi_started_) {
+        if (wifi_retry_ms_ == 0 ||
+            (millis() - wifi_retry_ms_) >= EZ2_WIFI_RETRY_MS) {
+            wifiKick_();
+        }
+        return;
+    }
+
+    /* Still joining: never block; on timeout schedule a later retry. */
+    if ((millis() - wifi_attempt_ms_) > EZ2_WIFI_TIMEOUT_MS) {
+        USBSerial.printf("[EZ2] wifi fail timeout %ums status=%d (retry %ums)\n",
+                         (unsigned)EZ2_WIFI_TIMEOUT_MS, (int)WiFi.status(),
+                         (unsigned)EZ2_WIFI_RETRY_MS);
+        WiFi.disconnect(false);
+        wifi_started_   = false;
+        wifi_retry_ms_  = millis();
+        wifi_logged_ok_ = false;
+    }
 }
 
 void EzData2Client::poll() {
     if (!began_) {
         begin();
     }
+
+    /* Always progress WiFi (boot + reconnect), independent of MQTT schedule. */
+    wifiPoll_();
+
     if (EZ2_DEVICE_TOKEN[0] == '\0' || EZ2_MAC_NO_COLON[0] == '\0') {
         return;
     }
@@ -101,33 +168,21 @@ bool EzData2Client::uploadNow() {
 }
 
 bool EzData2Client::ensureWifi_() {
+    /* Non-blocking: ready or skip. Connect is owned by begin/wifiPoll_. */
     if (WiFi.status() == WL_CONNECTED) {
-        USBSerial.printf("[EZ2] wifi already ip=%s rssi=%d\n",
-                         WiFi.localIP().toString().c_str(), WiFi.RSSI());
         return true;
     }
     if (EZ2_WIFI_SSID[0] == '\0') {
         USBSerial.println("[EZ2] wifi skip: empty SSID (secrets missing?)");
         return false;
     }
-
-    USBSerial.printf("[EZ2] wifi connecting ssid=%s ...\n", EZ2_WIFI_SSID);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(EZ2_WIFI_SSID, EZ2_WIFI_PASS);
-
-    const uint32_t t0 = millis();
-    while (WiFi.status() != WL_CONNECTED) {
-        if (millis() - t0 > EZ2_WIFI_TIMEOUT_MS) {
-            USBSerial.printf("[EZ2] wifi fail timeout %ums status=%d\n",
-                             (unsigned)EZ2_WIFI_TIMEOUT_MS, (int)WiFi.status());
-            return false;
-        }
-        delay(200);
+    if (!wifi_started_ &&
+        (wifi_retry_ms_ == 0 ||
+         (millis() - wifi_retry_ms_) >= EZ2_WIFI_RETRY_MS)) {
+        wifiKick_();
     }
-    USBSerial.printf("[EZ2] wifi ok ip=%s rssi=%d ms=%u\n",
-                     WiFi.localIP().toString().c_str(), WiFi.RSSI(),
-                     (unsigned)(millis() - t0));
-    return true;
+    USBSerial.println("[EZ2] wifi not ready (non-block skip)");
+    return false;
 }
 
 void EzData2Client::mqttPump_(uint32_t ms) {

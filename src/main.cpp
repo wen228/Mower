@@ -50,7 +50,8 @@ void setup() {
     m5gfx_lvgl_init();
 
     App_Init();
-    g_ez2.begin(); /* token empty → cloud skip until config filled */
+    /* Boot WiFi (non-block) + cloud client; token empty → MQTT skip only */
+    g_ez2.begin();
 }
 
 void loop() {

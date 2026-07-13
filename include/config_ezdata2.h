@@ -31,6 +31,8 @@
 #define EZ2_MQTT_HOST        "uiflow2.m5stack.com"
 #define EZ2_MQTT_PORT        1883
 #define EZ2_WIFI_TIMEOUT_MS  15000
+/* After a failed connect attempt, wait before WiFi.begin again (non-block). */
+#define EZ2_WIFI_RETRY_MS    30000
 #define EZ2_FLUSH_MS         500
 #define EZ2_UPLOAD_INTERVAL_MS  (60UL * 1000UL)
 
