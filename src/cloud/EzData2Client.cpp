@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include "config_ezdata2.h"
+#include "cloud/NetUpload.h"
 #include "motor/Mower.h"
 
 EzData2Client g_ez2;
@@ -31,7 +32,7 @@ static char s_last_upload_name[48];
 
 static void ez2MqttCallback(char* topic, byte* payload, unsigned int length) {
     (void)topic;
-    USBSerial.print("[EZ2] RX json=");
+    USBSerial.print("[EZ] RX json=");
     for (unsigned int i = 0; i < length; i++) {
         USBSerial.print((char)payload[i]);
     }
@@ -61,12 +62,12 @@ void EzData2Client::begin() {
 
 void EzData2Client::wifiKick_() {
     if (EZ2_WIFI_SSID[0] == '\0') {
-        USBSerial.println("[EZ2] wifi skip: empty SSID (secrets missing?)");
+        USBSerial.println("[EZ] wifi skip: empty SSID (secrets missing?)");
         wifi_started_ = false;
         return;
     }
 
-    USBSerial.printf("[EZ2] wifi start ssid=%s (non-block)\n", EZ2_WIFI_SSID);
+    USBSerial.printf("[EZ] wifi start ssid=%s (non-block)\n", EZ2_WIFI_SSID);
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
     WiFi.begin(EZ2_WIFI_SSID, EZ2_WIFI_PASS);
@@ -83,7 +84,7 @@ void EzData2Client::wifiPoll_() {
 
     if (WiFi.status() == WL_CONNECTED) {
         if (!wifi_logged_ok_) {
-            USBSerial.printf("[EZ2] wifi ok ip=%s rssi=%d\n",
+            USBSerial.printf("[EZ] wifi ok ip=%s rssi=%d\n",
                              WiFi.localIP().toString().c_str(), WiFi.RSSI());
             wifi_logged_ok_ = true;
         }
@@ -93,7 +94,7 @@ void EzData2Client::wifiPoll_() {
 
     /* Dropped after a successful join — let auto-reconnect try; re-kick on timeout. */
     if (wifi_logged_ok_) {
-        USBSerial.println("[EZ2] wifi lost");
+        USBSerial.println("[EZ] wifi lost");
         wifi_logged_ok_  = false;
         wifi_attempt_ms_ = millis();
         wifi_started_    = true;
@@ -109,7 +110,7 @@ void EzData2Client::wifiPoll_() {
 
     /* Still joining: never block; on timeout schedule a later retry. */
     if ((millis() - wifi_attempt_ms_) > EZ2_WIFI_TIMEOUT_MS) {
-        USBSerial.printf("[EZ2] wifi fail timeout %ums status=%d (retry %ums)\n",
+        USBSerial.printf("[EZ] wifi fail timeout %ums status=%d (retry %ums)\n",
                          (unsigned)EZ2_WIFI_TIMEOUT_MS, (int)WiFi.status(),
                          (unsigned)EZ2_WIFI_RETRY_MS);
         WiFi.disconnect(false);
@@ -161,7 +162,7 @@ bool EzData2Client::uploadNow() {
         begin();
     }
     if (EZ2_DEVICE_TOKEN[0] == '\0' || EZ2_MAC_NO_COLON[0] == '\0') {
-        USBSerial.println("[EZ2] skip: empty token/mac (need config_ezdata2_secrets.h)");
+        USBSerial.println("[EZ] skip: empty token/mac (need config_ezdata2_secrets.h)");
         return false;
     }
     return publishStatusSnapshot_();
@@ -173,7 +174,7 @@ bool EzData2Client::ensureWifi_() {
         return true;
     }
     if (EZ2_WIFI_SSID[0] == '\0') {
-        USBSerial.println("[EZ2] wifi skip: empty SSID (secrets missing?)");
+        USBSerial.println("[EZ] wifi skip: empty SSID (secrets missing?)");
         return false;
     }
     if (!wifi_started_ &&
@@ -181,7 +182,7 @@ bool EzData2Client::ensureWifi_() {
          (millis() - wifi_retry_ms_) >= EZ2_WIFI_RETRY_MS)) {
         wifiKick_();
     }
-    USBSerial.println("[EZ2] wifi not ready (non-block skip)");
+    USBSerial.println("[EZ] wifi not ready (non-block skip)");
     return false;
 }
 
@@ -214,9 +215,9 @@ bool EzData2Client::publishField_(const char* name, const char* value,
         return false;
     }
     if (dump_json) {
-        USBSerial.printf("[EZ2] TX json(soc %d)=%s\n", req, buf);
+        USBSerial.printf("[EZ] TX json(soc %d)=%s\n", req, buf);
     } else {
-        USBSerial.printf("[EZ2] TX %s req=%d val=%s\n", name, req, value);
+        USBSerial.printf("[EZ] TX %s req=%d val=%s\n", name, req, value);
     }
     if (!s_mqtt.publish(s_topic_up, buf)) {
         return false;
@@ -229,12 +230,12 @@ bool EzData2Client::publishField_(const char* name, const char* value,
 bool EzData2Client::publishStatusSnapshot_() {
     const Mower::Status s = g_mower.status();
 
-    USBSerial.printf("[EZ2] run=%d soc=%.1f used=%.1f create=%d\n",
+    USBSerial.printf("[EZ] run=%d soc=%.1f used=%.1f create=%d\n",
                      s.running ? 1 : 0, (double)s.batt_soc_pct,
                      (double)s.batt_used_mah, fields_created_ ? 0 : 1);
 
     if (!ensureWifi_()) {
-        USBSerial.println("[EZ2] fail wifi");
+        USBSerial.println("[EZ] fail wifi");
         return false;
     }
 
@@ -248,14 +249,14 @@ bool EzData2Client::publishStatusSnapshot_() {
     s_mqtt.setCallback(ez2MqttCallback);
 
     if (!s_mqtt.connect(s_client_id, EZ2_DEVICE_TOKEN, "")) {
-        USBSerial.printf("[EZ2] fail mqtt rc=%d\n", s_mqtt.state());
+        USBSerial.printf("[EZ] fail mqtt rc=%d\n", s_mqtt.state());
         return false;
     }
 
     if (!s_mqtt.subscribe(s_topic_down)) {
-        USBSerial.println("[EZ2] warn: subscribe down failed");
+        USBSerial.println("[EZ] warn: subscribe down failed");
     } else {
-        USBSerial.printf("[EZ2] sub %s\n", s_topic_down);
+        USBSerial.printf("[EZ] sub %s\n", s_topic_down);
     }
     mqttPump_(200);
 
@@ -285,17 +286,17 @@ bool EzData2Client::publishStatusSnapshot_() {
     if (s_last_rx_ok && strstr(s_last_rx, "\"code\":200") &&
         (strstr(s_last_rx, "\"cmd\":100") || strstr(s_last_rx, "\"cmd\":101"))) {
         if (!fields_created_) {
-            USBSerial.println("[EZ2] fields ok → next upload uses 101");
+            USBSerial.println("[EZ] fields ok → next upload uses 101");
         }
         fields_created_ = true;
     } else if (ok && !fields_created_) {
         /* Pubs succeeded; assume create landed (fields already on web in demo). */
         fields_created_ = true;
-        USBSerial.println("[EZ2] pubs ok → next upload uses 101");
+        USBSerial.println("[EZ] pubs ok → next upload uses 101");
     }
 
     s_mqtt.disconnect();
-    USBSerial.printf("[EZ2] %s\n", ok ? "ok" : "fail pub");
+    USBSerial.printf("[EZ] %s\n", ok ? "ok" : "fail pub");
     return ok;
 }
 
@@ -313,13 +314,13 @@ bool EzData2Client::mqttConnectSession_() {
     s_mqtt.setCallback(ez2MqttCallback);
 
     if (!s_mqtt.connect(s_client_id, EZ2_DEVICE_TOKEN, "")) {
-        USBSerial.printf("[EZ2] fail mqtt rc=%d\n", s_mqtt.state());
+        USBSerial.printf("[EZ] fail mqtt rc=%d\n", s_mqtt.state());
         return false;
     }
     if (!s_mqtt.subscribe(s_topic_down)) {
-        USBSerial.println("[EZ2] warn: subscribe down failed");
+        USBSerial.println("[EZ] warn: subscribe down failed");
     } else {
-        USBSerial.printf("[EZ2] sub %s\n", s_topic_down);
+        USBSerial.printf("[EZ] sub %s\n", s_topic_down);
     }
     mqttPump_(150);
     return true;
@@ -329,7 +330,7 @@ bool EzData2Client::mqttPublishRaw_(const char* json) {
     if (!json || !s_mqtt.connected()) {
         return false;
     }
-    USBSerial.printf("[EZ2] TX %s\n", json);
+    USBSerial.printf("[EZ] TX %s\n", json);
     if (!s_mqtt.publish(s_topic_up, json)) {
         return false;
     }
@@ -340,14 +341,14 @@ bool EzData2Client::mqttPublishRaw_(const char* json) {
 
 void EzData2Client::httpGetUrlProbe_(const char* url) {
     if (!url || strncmp(url, "https://", 8) != 0) {
-        USBSerial.println("[EZ2] file GET skip: no https url");
+        USBSerial.println("[EZ] file GET skip: no https url");
         return;
     }
     /* Parse host + path from https://host/path... */
     const char* host_start = url + 8;
     const char* path_start = strchr(host_start, '/');
     if (!path_start) {
-        USBSerial.println("[EZ2] file GET fail: bad url");
+        USBSerial.println("[EZ] file GET fail: bad url");
         return;
     }
     char host[80];
@@ -358,13 +359,13 @@ void EzData2Client::httpGetUrlProbe_(const char* url) {
     memcpy(host, host_start, host_len);
     host[host_len] = '\0';
 
-    USBSerial.printf("[EZ2] file GET probe host=%s\n", host);
+    USBSerial.printf("[EZ] file GET probe host=%s\n", host);
 
     WiFiClientSecure client;
     client.setInsecure();
     client.setTimeout(EZ2_HTTP_TIMEOUT_MS);
     if (!client.connect(host, 443)) {
-        USBSerial.println("[EZ2] file GET fail connect");
+        USBSerial.println("[EZ] file GET fail connect");
         return;
     }
     client.printf("GET %s HTTP/1.1\r\n", path_start);
@@ -423,7 +424,7 @@ void EzData2Client::httpGetUrlProbe_(const char* url) {
     body_snip[bn] = '\0';
     client.stop();
 
-    USBSerial.printf("[EZ2] file GET status=%d clen=%d snip=%s\n", status,
+    USBSerial.printf("[EZ] file GET status=%d clen=%d snip=%s\n", status,
                      content_len, body_snip);
 }
 
@@ -432,10 +433,10 @@ void EzData2Client::verifyUploadedFile_() {
      * No HTTP GET-file API in EzData2 docs.
      * Verify: (1) MQTT cmd105 URL (2) 104 GET deviceFile (3) HTTPS GET URL.
      */
-    USBSerial.println("[EZ2] file verify: wait cmd105 + GET deviceFile");
+    USBSerial.println("[EZ] file verify: wait cmd105 + GET deviceFile");
 
     if (!s_mqtt.connected() && !mqttConnectSession_()) {
-        USBSerial.println("[EZ2] file verify fail mqtt");
+        USBSerial.println("[EZ] file verify fail mqtt");
         return;
     }
 
@@ -444,7 +445,7 @@ void EzData2Client::verifyUploadedFile_() {
     char url_buf[200];
     url_buf[0] = '\0';
     if (s_file105_ok) {
-        USBSerial.printf("[EZ2] file verify got cmd105: %s\n", s_file105_rx);
+        USBSerial.printf("[EZ] file verify got cmd105: %s\n", s_file105_rx);
         const char* v = strstr(s_file105_rx, "\"value\":\"");
         if (v) {
             v += 9;
@@ -452,11 +453,11 @@ void EzData2Client::verifyUploadedFile_() {
             if (e && (size_t)(e - v) < sizeof(url_buf)) {
                 memcpy(url_buf, v, (size_t)(e - v));
                 url_buf[e - v] = '\0';
-                USBSerial.printf("[EZ2] file url=%s\n", url_buf);
+                USBSerial.printf("[EZ] file url=%s\n", url_buf);
             }
         }
     } else {
-        USBSerial.println("[EZ2] file verify: no cmd105 in window (try 104)");
+        USBSerial.println("[EZ] file verify: no cmd105 in window (try 104)");
     }
 
     /* 104 GET: prefer form name we uploaded, else name from cmd105, else deviceFile. */
@@ -477,7 +478,7 @@ void EzData2Client::verifyUploadedFile_() {
             }
         }
     }
-    USBSerial.printf("[EZ2] file verify 104 name=%s\n", get_name_buf);
+    USBSerial.printf("[EZ] file verify 104 name=%s\n", get_name_buf);
 
     StaticJsonDocument<192> doc;
     doc["deviceToken"]         = EZ2_DEVICE_TOKEN;
@@ -488,10 +489,10 @@ void EzData2Client::verifyUploadedFile_() {
         s_last_rx_ok = false;
         s_last_rx[0] = '\0';
         if (mqttPublishRaw_(req)) {
-            USBSerial.println("[EZ2] file verify: wait 104 RX...");
+            USBSerial.println("[EZ] file verify: wait 104 RX...");
             mqttPump_(EZ2_FILE_VERIFY_MS);
             if (s_last_rx_ok) {
-                USBSerial.printf("[EZ2] file 104 RX=%s\n", s_last_rx);
+                USBSerial.printf("[EZ] file 104 RX=%s\n", s_last_rx);
                 if (url_buf[0] == '\0') {
                     const char* v = strstr(s_last_rx, "\"value\":\"");
                     if (v) {
@@ -500,13 +501,13 @@ void EzData2Client::verifyUploadedFile_() {
                         if (e && (size_t)(e - v) < sizeof(url_buf)) {
                             memcpy(url_buf, v, (size_t)(e - v));
                             url_buf[e - v] = '\0';
-                            USBSerial.printf("[EZ2] file url(from 104)=%s\n",
+                            USBSerial.printf("[EZ] file url(from 104)=%s\n",
                                              url_buf);
                         }
                     }
                 }
             } else {
-                USBSerial.println("[EZ2] file verify: no 104 RX");
+                USBSerial.println("[EZ] file verify: no 104 RX");
             }
         }
     }
@@ -515,7 +516,7 @@ void EzData2Client::verifyUploadedFile_() {
         httpGetUrlProbe_(url_buf);
     } else {
         USBSerial.println(
-            "[EZ2] file verify: no URL — cloud may store file but GUI/field "
+            "[EZ] file verify: no URL — cloud may store file but GUI/field "
             "not exposed; check my.m5stack.com group");
     }
 
@@ -524,29 +525,29 @@ void EzData2Client::verifyUploadedFile_() {
 
 bool EzData2Client::uploadLogFile(const char* path) {
     if (!path || path[0] == '\0') {
-        USBSerial.println("[EZ2] file skip: empty path");
+        USBSerial.println("[EZ] file skip: empty path");
         return false;
     }
     if (EZ2_DEVICE_TOKEN[0] == '\0') {
-        USBSerial.println("[EZ2] file skip: empty token (need secrets)");
+        USBSerial.println("[EZ] file skip: empty token (need secrets)");
         return false;
     }
 
     File f = SD.open(path, FILE_READ);
     if (!f) {
-        USBSerial.printf("[EZ2] file fail open %s\n", path);
+        USBSerial.printf("[EZ] file fail open %s\n", path);
         return false;
     }
     const size_t file_size = f.size();
     const char* base = strrchr(path, '/');
     base = (base && base[1]) ? (base + 1) : path;
 
-    USBSerial.printf("[EZ2] file upload %s bytes=%u\n", path,
+    USBSerial.printf("[EZ] file upload %s bytes=%u\n", path,
                      (unsigned)file_size);
 
     if (!ensureWifi_()) {
         f.close();
-        USBSerial.println("[EZ2] file fail wifi");
+        USBSerial.println("[EZ] file fail wifi");
         return false;
     }
 
@@ -568,7 +569,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
         kBoundary, EZ2_DEVICE_TOKEN);
     if (token_n <= 0 || token_n >= (int)sizeof(token_part)) {
         f.close();
-        USBSerial.println("[EZ2] file fail token part");
+        USBSerial.println("[EZ] file fail token part");
         return false;
     }
 
@@ -582,7 +583,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
         kBoundary, base);
     if (name_n <= 0 || name_n >= (int)sizeof(name_part)) {
         f.close();
-        USBSerial.println("[EZ2] file fail name part");
+        USBSerial.println("[EZ] file fail name part");
         return false;
     }
 
@@ -595,7 +596,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
         kBoundary, base);
     if (head_n <= 0 || head_n >= (int)sizeof(file_head)) {
         f.close();
-        USBSerial.println("[EZ2] file fail file head");
+        USBSerial.println("[EZ] file fail file head");
         return false;
     }
 
@@ -607,7 +608,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
         return false;
     }
 
-    USBSerial.printf("[EZ2] file form name=%s filename=%s\n", base, base);
+    USBSerial.printf("[EZ] file form name=%s filename=%s\n", base, base);
 
     const size_t content_len = (size_t)token_n + (size_t)name_n +
                                (size_t)head_n + file_size + (size_t)tail_n;
@@ -616,10 +617,14 @@ bool EzData2Client::uploadLogFile(const char* path) {
     client.setInsecure(); /* demo: skip CA verify */
     client.setTimeout(EZ2_HTTP_TIMEOUT_MS);
 
-    USBSerial.printf("[EZ2] file HTTPS %s ...\n", EZ2_FILE_UPLOAD_HOST);
+    {
+        char ts[12];
+        Ez_hhmmss(ts, sizeof(ts));
+        USBSerial.printf("[EZ] %s HTTP start %s\n", ts, EZ2_FILE_UPLOAD_HOST);
+    }
     if (!client.connect(EZ2_FILE_UPLOAD_HOST, 443)) {
         f.close();
-        USBSerial.println("[EZ2] file fail connect");
+        USBSerial.println("[EZ] file fail connect");
         return false;
     }
 
@@ -645,7 +650,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
         if (w != (size_t)n) {
             f.close();
             client.stop();
-            USBSerial.println("[EZ2] file fail write body");
+            USBSerial.println("[EZ] file fail write body");
             return false;
         }
         sent += w;
@@ -654,7 +659,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
     client.write((const uint8_t*)tail, (size_t)tail_n);
 
     if (sent != file_size) {
-        USBSerial.printf("[EZ2] file warn sent=%u size=%u\n", (unsigned)sent,
+        USBSerial.printf("[EZ] file warn sent=%u size=%u\n", (unsigned)sent,
                          (unsigned)file_size);
     }
 
@@ -668,7 +673,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
 
     while (client.connected() || client.available()) {
         if (millis() - t0 > EZ2_HTTP_TIMEOUT_MS) {
-            USBSerial.println("[EZ2] file fail timeout resp");
+            USBSerial.println("[EZ] file fail timeout resp");
             client.stop();
             return false;
         }
@@ -703,7 +708,7 @@ bool EzData2Client::uploadLogFile(const char* path) {
     json_body[jn] = '\0';
     client.stop();
 
-    USBSerial.printf("[EZ2] file HTTP status=%d body=%s\n", status, json_body);
+    USBSerial.printf("[EZ] file HTTP status=%d body=%s\n", status, json_body);
 
     /* Transport 200 is not enough — API uses body.code (200 ok, 500 fail). */
     const bool biz_fail =
@@ -715,13 +720,19 @@ bool EzData2Client::uploadLogFile(const char* path) {
     const bool http_ok = (status == 200) && biz_ok && !biz_fail;
 
     if (!http_ok) {
-        USBSerial.println("[EZ2] file fail (need body code 200; see body above)");
+        USBSerial.println("[EZ] file fail (need body code 200; see body above)");
         return false;
     }
 
     snprintf(s_last_upload_name, sizeof(s_last_upload_name), "%s", base);
-    USBSerial.printf("[EZ2] file HTTP ok bytes=%u name=%s\n",
+    USBSerial.printf("[EZ] file HTTP ok bytes=%u name=%s\n",
                      (unsigned)file_size, base);
+    {
+        char ts[12];
+        Ez_hhmmss(ts, sizeof(ts));
+        USBSerial.printf("[EZ] %s ok\n", ts);
+    }
     /* intentionally not: verifyUploadedFile_(); */
     return true;
 }
+
