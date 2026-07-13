@@ -17,18 +17,16 @@ LV_IMG_DECLARE(menu_imu_se);
 #endif
 LV_IMG_DECLARE(menu_touch);
 LV_IMG_DECLARE(menu_i2c);
-/* Dummy icon for AppMower / AppBattery until custom assets arrive. */
-LV_IMG_DECLARE(menu_wifi);
 LV_IMG_DECLARE(menu_sd);
 LV_IMG_DECLARE(menu_sys);
 
 /* Order = Mower / Battery / SD / SelfCheck(I2C) / Power / IMU / Touch */
 static const lv_img_dsc_t* MENU_GRID_IMG[] = {
-    &menu_wifi, /* AppMower  — dummy (WiFi asset) */
-    &menu_wifi, /* AppBattery — dummy (WiFi asset) */
-    &menu_sd,   /* AppSD */
-    &menu_i2c,  /* Self-check */
-    &menu_power,
+    &menu_touch, /* AppMower — reuse touch tile art */
+    &menu_power, /* AppBattery — same family as Power */
+    &menu_sd,    /* AppSD */
+    &menu_i2c,   /* Self-check */
+    &menu_power, /* AppPower */
 #if defined(M5CORES3)
     &menu_imu,
 #elif defined(M5CORES3SE)

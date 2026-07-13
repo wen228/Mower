@@ -2,7 +2,7 @@
 
 using namespace Page;
 
-/* Official apps: top chrome ~68px (Power/I2C). Temporary: reuse app_power_ii. */
+/* Top chrome like AppI2C (home / title / next), no Power banner art. */
 static const lv_coord_t kBannerH = 68;
 
 lv_obj_t* AppMowerView::makeBtn(lv_obj_t* parent, const char* text, lv_coord_t w,
@@ -21,17 +21,7 @@ void AppMowerView::Create(lv_obj_t* root) {
     lv_obj_set_style_bg_color(root, lv_color_hex(0xF5F5F5), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
 
-    /* Same pattern as AppPowerView: full Power art; body covers diagram. */
-    ui.img_bg = lv_img_create(root);
-    lv_img_set_src(ui.img_bg, ResourcePool::GetImage("app_power_ii"));
-
-    lv_obj_t* body = lv_obj_create(root);
-    lv_obj_remove_style_all(body);
-    lv_obj_set_size(body, 320, 240 - kBannerH);
-    lv_obj_set_pos(body, 0, kBannerH);
-    lv_obj_set_style_bg_color(body, lv_color_hex(0xF5F5F5), 0);
-    lv_obj_set_style_bg_opa(body, LV_OPA_COVER, 0);
-    lv_obj_clear_flag(body, LV_OBJ_FLAG_SCROLLABLE);
+    ui.img_bg = nullptr;
 
     ui.imgbtn_home = lv_imgbtn_create(root);
     lv_obj_set_size(ui.imgbtn_home, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -49,10 +39,12 @@ void AppMowerView::Create(lv_obj_t* root) {
                       ResourcePool::GetImage("next_p"), NULL);
     lv_obj_align(ui.imgbtn_next, LV_ALIGN_TOP_RIGHT, 5, 0);
 
-    /* Title is inside Power banner art; keep slot unused for now. */
-    ui.label_title = nullptr;
+    ui.label_title = lv_label_create(root);
+    lv_label_set_text(ui.label_title, "Mower");
+    lv_obj_set_style_text_color(ui.label_title, lv_color_hex(0x222222), 0);
+    lv_obj_align(ui.label_title, LV_ALIGN_TOP_MID, 0, 22);
 
-    /* Status + telemetry (room for 2-line telem). */
+    /* Status + telemetry */
     ui.label_status = lv_label_create(root);
     lv_label_set_text(ui.label_status, "STOP | Eco 30%");
     lv_obj_set_style_text_color(ui.label_status, lv_color_hex(0x1A7A4C), 0);
@@ -74,7 +66,7 @@ void AppMowerView::Create(lv_obj_t* root) {
     lv_obj_set_pos(ui.btn_normal, 113, kBannerH + 62);
     lv_obj_set_pos(ui.btn_turbo, 214, kBannerH + 62);
 
-    /* RUN / E-STOP / Reset on one row (short labels). */
+    /* RUN / E-STOP / Reset */
     ui.btn_toggle = makeBtn(root, "RUN", 96, 38, lv_color_hex(0x2E8B57));
     ui.btn_estop  = makeBtn(root, "E-STOP", 96, 38, lv_color_hex(0xCC2222));
     ui.btn_reset  = makeBtn(root, "Reset", 96, 38, lv_color_hex(0x666666));
