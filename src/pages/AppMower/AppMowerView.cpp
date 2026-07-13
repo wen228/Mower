@@ -51,7 +51,8 @@ void AppMowerView::Create(lv_obj_t* root) {
     lv_obj_set_pos(ui.label_status, 12, kBannerH + 6);
 
     ui.label_telem = lv_label_create(root);
-    lv_label_set_text(ui.label_telem, "Spd:--  I:--  Vin:--\nLoad:--  P:--  SOC:--");
+    lv_label_set_text(ui.label_telem,
+                      "RPM:--  TGT:--\nI:--  Vin:--  P:--\nLoad:--  SOC:--");
     lv_obj_set_style_text_color(ui.label_telem, lv_color_hex(0x333333), 0);
     lv_obj_set_pos(ui.label_telem, 12, kBannerH + 24);
     lv_label_set_long_mode(ui.label_telem, LV_LABEL_LONG_WRAP);
@@ -62,17 +63,18 @@ void AppMowerView::Create(lv_obj_t* root) {
     ui.btn_eco    = makeBtn(root, "Eco", 94, 34, gear_bg);
     ui.btn_normal = makeBtn(root, "Normal", 94, 34, gear_bg);
     ui.btn_turbo  = makeBtn(root, "Turbo", 94, 34, gear_bg);
-    lv_obj_set_pos(ui.btn_eco, 12, kBannerH + 62);
-    lv_obj_set_pos(ui.btn_normal, 113, kBannerH + 62);
-    lv_obj_set_pos(ui.btn_turbo, 214, kBannerH + 62);
+    /* Telem is 3 lines; gear/actions sit below. */
+    lv_obj_set_pos(ui.btn_eco, 12, kBannerH + 88);
+    lv_obj_set_pos(ui.btn_normal, 113, kBannerH + 88);
+    lv_obj_set_pos(ui.btn_turbo, 214, kBannerH + 88);
 
     /* RUN / E-STOP / Reset */
     ui.btn_toggle = makeBtn(root, "RUN", 96, 38, lv_color_hex(0x2E8B57));
     ui.btn_estop  = makeBtn(root, "E-STOP", 96, 38, lv_color_hex(0xCC2222));
     ui.btn_reset  = makeBtn(root, "Reset", 96, 38, lv_color_hex(0x666666));
-    lv_obj_set_pos(ui.btn_toggle, 12, kBannerH + 108);
-    lv_obj_set_pos(ui.btn_estop, 112, kBannerH + 108);
-    lv_obj_set_pos(ui.btn_reset, 212, kBannerH + 108);
+    lv_obj_set_pos(ui.btn_toggle, 12, kBannerH + 132);
+    lv_obj_set_pos(ui.btn_estop, 112, kBannerH + 132);
+    lv_obj_set_pos(ui.btn_reset, 212, kBannerH + 132);
     ui.label_toggle = lv_obj_get_child(ui.btn_toggle, 0);
 }
 

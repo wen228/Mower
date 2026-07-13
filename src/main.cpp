@@ -16,6 +16,7 @@
 #include "sd/SdLogger.h"
 #include "cloud/EzData2Client.h"
 #include "cloud/NetUpload.h"
+#include "cloud/EspNowTx.h"
 
 void setup() {
     esp_err_t ret = nvs_flash_init();
@@ -54,11 +55,13 @@ void setup() {
     /* Boot WiFi (non-block) + cloud client; token empty → MQTT skip only */
     g_ez2.begin();
     NetUpload_begin(); /* FreeRTOS worker for CSV HTTP upload */
+    EspNowTx_begin();  /* ESP-NOW broadcast telemetry (classic esp_now.h) */
 }
 
 void loop() {
     Mower_handleSerial();
     Mower_poll();
+    EspNowTx_poll(); /* ~4 Hz mower status broadcast */
     g_sd_logger.poll();
     g_ez2.poll(); /* start edge + every 60s: soc / used_mAh / running */
     lv_timer_handler();
