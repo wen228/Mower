@@ -1,7 +1,7 @@
 /**
  * Manual SD CSV logger (REC / STOP).
- * Full columns for offline/MQTT; M5 UI may show a subset.
- * ms,tgt,rpm,current_mA,power_W,gear,running,fault,load,temp
+ * t = wall ms from one-shot RTC baseline + millis (no NTP, no extra column).
+ * t,tgt,rpm,current_mA,power_W,gear,running,fault,load,temp
  */
 #ifndef SD_LOGGER_H
 #define SD_LOGGER_H
@@ -32,9 +32,15 @@ private:
     void closeFile();
     /** 1..kMaxFiles ring; overwrites oldest slot. */
     uint16_t nextFileIndex();
+    /** Once: RTC → wall_ms0_ + millis0_; later t = wall_ms0_ + (millis-millis0_). */
+    void ensureTimeBase_();
+    uint64_t nowT_ms_() const;
 
     bool file_open_  = false;
     bool held_mount_ = false;
+    bool time_base_ok_ = false;
+    uint64_t wall_ms0_ = 0;   /* RTC epoch ms at capture */
+    uint32_t millis0_  = 0;   /* millis() at same instant */
     uint32_t last_write_ms_ = 0;
     uint32_t lines_  = 0;
     uint16_t file_idx_ = 0; /* last used 1..kMaxFiles; 0 = none yet */

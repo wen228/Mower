@@ -2,6 +2,9 @@
 
 #include <cstdio>
 #include <cstring>
+#include <ctime>
+
+#include <M5Unified.h>
 
 #include "sd/SdMount.h"
 #include "motor/Mower.h"
@@ -10,10 +13,37 @@
 
 SdLogger g_sd_logger;
 
+void SdLogger::ensureTimeBase_() {
+    if (time_base_ok_) {
+        return;
+    }
+    /* One-shot RTC read (no NTP). Then advance with millis only. */
+    wall_ms0_ = 0;
+    if (M5.Rtc.isEnabled()) {
+        m5::rtc_datetime_t dt;
+        if (M5.Rtc.getDateTime(&dt)) {
+            tm tm_ = dt.get_tm();
+            const time_t sec = mktime(&tm_);
+            if (sec > (time_t)0) {
+                wall_ms0_ = (uint64_t)sec * 1000ULL;
+            }
+        }
+    }
+    millis0_      = millis();
+    time_base_ok_ = true;
+    USBSerial.printf("[LOG] t base wall_ms=%llu millis0=%u (RTC once)\n",
+                     (unsigned long long)wall_ms0_, (unsigned)millis0_);
+}
+
+uint64_t SdLogger::nowT_ms_() const {
+    return wall_ms0_ + (uint32_t)(millis() - millis0_);
+}
+
 bool SdLogger::start() {
     if (file_open_) {
         return true;
     }
+    ensureTimeBase_();
     if (!SdCardPresent()) {
         snprintf(status_, sizeof(status_), "Log: no card");
         USBSerial.println("[LOG] start fail: no card");
@@ -88,7 +118,7 @@ bool SdLogger::openNewFile() {
     }
 
     file_.println(
-        "ms,tgt,rpm,current_mA,power_W,gear,running,fault,load,temp");
+        "t,tgt,rpm,current_mA,power_W,gear,running,fault,load,temp");
     file_.flush();
     file_open_ = true;
     lines_     = 0;
@@ -103,8 +133,9 @@ void SdLogger::writeRow() {
     }
     const Mower::Status s = g_mower.status();
     const float tgt = (float)s.target_raw / SCALE_SPEED_DIV;
-    file_.printf("%lu,%.1f,%.1f,%.1f,%.2f,%d,%d,%d,%d,%d\n",
-                 (unsigned long)millis(), (double)tgt, (double)s.speed,
+    /* t: epoch-ms from RTC baseline + millis delta (single column). */
+    file_.printf("%llu,%.1f,%.1f,%.1f,%.2f,%d,%d,%d,%d,%d\n",
+                 (unsigned long long)nowT_ms_(), (double)tgt, (double)s.speed,
                  (double)s.current, (double)s.batt_power_w, s.gear,
                  s.running ? 1 : 0, s.fault ? 1 : 0, (int)s.load, s.temp);
     lines_++;
