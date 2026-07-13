@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 
 #include "sd/SdMount.h"
 
@@ -85,22 +86,31 @@ bool AppSDModel::ReadCsvTail50(const char* path) {
             continue;
         }
 
-        unsigned long ms = 0;
+        /* t = epoch ms (new) or boot ms (old files); show as HH:MM:SS only. */
+        unsigned long long t_ms = 0;
         float tgt = 0, rpm = 0, cur = 0;
         int run = 0, fault = 0;
-        int nfield = sscanf(s_raw, "%lu,%f,%f,%f,%*f,%*d,%d,%d", &ms, &tgt,
+        int nfield = sscanf(s_raw, "%llu,%f,%f,%f,%*f,%*d,%d,%d", &t_ms, &tgt,
                             &rpm, &cur, &run, &fault);
         if (nfield < 6) {
             tgt    = 0;
-            nfield = sscanf(s_raw, "%lu,%f,%f,%*f,%*d,%d,%d", &ms, &rpm, &cur,
-                            &run, &fault);
+            nfield = sscanf(s_raw, "%llu,%f,%f,%*f,%*d,%d,%d", &t_ms, &rpm,
+                            &cur, &run, &fault);
             if (nfield < 5) {
                 continue;
             }
         }
-        /* Fixed-width spaces only (default font, no extra typeface). */
-        snprintf(s_ring[w], CSV_LINE_LEN, "%6lu %4.0f %4.0f %4.0f %3d %5d", ms,
-                 (double)tgt, (double)rpm, (double)cur, run, fault);
+        const time_t sec = (time_t)(t_ms / 1000ULL);
+        struct tm tm_buf;
+        struct tm* tm_p = localtime_r(&sec, &tm_buf);
+        int mm = 0, ss = 0;
+        if (tm_p) {
+            mm = tm_p->tm_min;
+            ss = tm_p->tm_sec;
+        }
+        /* Fixed-width: MM:SS only (no HH). */
+        snprintf(s_ring[w], CSV_LINE_LEN, "%02d:%02d %4.0f %4.0f %4.0f %3d %5d",
+                 mm, ss, (double)tgt, (double)rpm, (double)cur, run, fault);
         w = (w + 1) % CSV_VIEW_MAX;
         if (count < CSV_VIEW_MAX) {
             count++;

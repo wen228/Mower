@@ -14,7 +14,7 @@ public:
     void begin();
     void poll();
     bool uploadNow();
-    /** POST SD CSV while card still mounted. path e.g. /mower_01.csv */
+    /** POST SD CSV while card still mounted. path e.g. /Mower_MMDD_HHMMSS.csv */
     bool uploadLogFile(const char* path);
 
 private:

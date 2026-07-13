@@ -25,7 +25,7 @@ class AppSDModel {
 
     /**
      * Read CSV into internal static-sized buffers (not on call stack).
-     * UI lines: "ms tgt rpm I run fault", last CSV_VIEW_MAX rows.
+     * UI lines: "MM:SS tgt rpm I run fault", last CSV_VIEW_MAX rows.
      */
     bool ReadCsvTail50(const char* path);
     int viewLineCount() const { return view_n_; }

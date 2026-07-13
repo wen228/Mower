@@ -30,8 +30,6 @@ private:
     bool openNewFile();
     void writeRow();
     void closeFile();
-    /** 1..kMaxFiles ring; overwrites oldest slot. */
-    uint16_t nextFileIndex();
     /** Once: RTC → wall_ms0_ + millis0_; later t = wall_ms0_ + (millis-millis0_). */
     void ensureTimeBase_();
     uint64_t nowT_ms_() const;
@@ -43,13 +41,11 @@ private:
     uint32_t millis0_  = 0;   /* millis() at same instant */
     uint32_t last_write_ms_ = 0;
     uint32_t lines_  = 0;
-    uint16_t file_idx_ = 0; /* last used 1..kMaxFiles; 0 = none yet */
     File file_;
-    char path_[24]   = "";
+    char path_[32]   = "";  /* /Mower_MMDD_HHMMSS.csv */
     char status_[48] = "Log: STOP";
 
     static const uint32_t kPeriodMs  = 200;
-    static const uint16_t kMaxFiles  = 99;
 };
 
 extern SdLogger g_sd_logger;

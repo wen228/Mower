@@ -122,13 +122,17 @@ void AppSD::ListSDCard(fs::FS& fs, const char* dirname, uint8_t levels) {
             const char* base = strrchr(name, '/');
             base             = base ? base + 1 : name;
 
-            /* mower_XX.csv → clickable; caption starts with exact filename */
+            /* Mower_MMDD_HHMMSS.csv (or legacy mower_XX.csv) → clickable */
+            int mon = 0, day = 0, hh = 0, mi = 0, se = 0;
             unsigned idx = 0;
-            if (sscanf(base, "mower_%u.csv", &idx) == 1 && idx >= 1 &&
-                idx <= 99) {
-                char caption[40];
-                /* Keep "mower_XX.csv" as first token — onFileClick parses it.
-                 * Do NOT stash path in user_data (lv_list may own that). */
+            const bool is_mower =
+                (sscanf(base, "Mower_%2d%2d_%2d%2d%2d.csv", &mon, &day, &hh,
+                        &mi, &se) == 5) ||
+                (sscanf(base, "mower_%u.csv", &idx) == 1 && idx >= 1 &&
+                 idx <= 99);
+            if (is_mower) {
+                char caption[48];
+                /* First token = filename for onFileClick. */
                 snprintf(caption, sizeof(caption), "%s %dKB", base,
                          (int)(file.size() / 1024));
                 lv_obj_t* btn =
@@ -176,7 +180,7 @@ void AppSD::EnterCsvView(const char* path) {
     lv_obj_t* t = lv_label_create(View.ui.file_list);
     lv_label_set_text_fmt(t, "%s  (tap title=back)", path);
     lv_obj_t* h = lv_label_create(View.ui.file_list);
-    lv_label_set_text(h, "    ms  tgt  rpm    I run fault");
+    lv_label_set_text(h, "t M:S  tgt  rpm    I  run fault");
 
     const int n = Model.viewLineCount();
     if (n == 0) {
@@ -280,19 +284,24 @@ void AppSD::onFileClick(lv_event_t* event) {
         return;
     }
 
-    char base[24] = {0};
-    if (sscanf(txt, "%23s", base) != 1) {
+    char base[32] = {0};
+    if (sscanf(txt, "%31s", base) != 1) {
         return;
     }
+    int mon = 0, day = 0, hh = 0, mi = 0, se = 0;
     unsigned idx = 0;
-    if (sscanf(base, "mower_%u.csv", &idx) != 1 || idx < 1 || idx > 99) {
+    const bool is_mower =
+        (sscanf(base, "Mower_%2d%2d_%2d%2d%2d.csv", &mon, &day, &hh, &mi,
+                &se) == 5) ||
+        (sscanf(base, "mower_%u.csv", &idx) == 1 && idx >= 1 && idx <= 99);
+    if (!is_mower) {
         return;
     }
 
     M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"), ~0u,
                        1, 1);
 
-    char path[28];
+    char path[36];
     snprintf(path, sizeof(path), "/%s", base);
     instance->EnterCsvView(path);
 }

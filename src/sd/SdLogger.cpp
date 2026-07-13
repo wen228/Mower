@@ -95,19 +95,25 @@ void SdLogger::toggle() {
     }
 }
 
-uint16_t SdLogger::nextFileIndex() {
-    /* Ring 1..99: after 99 comes 1 (overwrite that slot). */
-    file_idx_ = (uint16_t)((file_idx_ % kMaxFiles) + 1);
-    return file_idx_;
-}
-
 bool SdLogger::openNewFile() {
     if (file_open_) {
         return true;
     }
 
-    nextFileIndex();
-    snprintf(path_, sizeof(path_), "/mower_%02u.csv", (unsigned)file_idx_);
+    /* Name: Mower_MMDD_HHMMSS.csv from RTC at REC start (fallback 0000_000000). */
+    int mon = 0, day = 0, hh = 0, mi = 0, se = 0;
+    if (M5.Rtc.isEnabled()) {
+        m5::rtc_datetime_t dt;
+        if (M5.Rtc.getDateTime(&dt)) {
+            mon = dt.date.month;
+            day = dt.date.date;
+            hh  = dt.time.hours;
+            mi  = dt.time.minutes;
+            se  = dt.time.seconds;
+        }
+    }
+    snprintf(path_, sizeof(path_), "/Mower_%02d%02d_%02d%02d%02d.csv", mon,
+             day, hh, mi, se);
     /* FILE_WRITE truncates; remove first so old size never confuses list tools. */
     SD.remove(path_);
     file_ = SD.open(path_, FILE_WRITE);
