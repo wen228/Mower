@@ -7,10 +7,7 @@
 namespace Page {
 
 class AppI2C : public PageBase {
-   public:
-    uint8_t port_index = 0;
-    bool scan_flag = false;
-   public:
+public:
     AppI2C();
     virtual ~AppI2C();
 
@@ -24,19 +21,13 @@ class AppI2C : public PageBase {
     virtual void onViewUnload();
     virtual void onViewDidUnload();
 
-   private:
-    void Update();
-    void AttachEvent(lv_obj_t* obj) {
-        AttachEvent(obj, LV_EVENT_ALL);
-    }
+private:
+    void runCheckAndShow();
     void AttachEvent(lv_obj_t* obj, lv_event_code_t code);
-    static void onTimerUpdate(lv_timer_t* timer);
     static void onEvent(lv_event_t* event);
 
-   private:
     AppI2CView View;
     AppI2CModel Model;
-    lv_timer_t* timer;
 };
 
 }  // namespace Page

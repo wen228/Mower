@@ -1,8 +1,20 @@
 #include "AppI2C.h"
 
+#include <WiFi.h>
+#include <cstdio>
+
+#include "config.h"
+#include "config_mower.h"
+#include "motor/Mower.h"
+#include "sd/SdMount.h"
+
 using namespace Page;
 
-AppI2C::AppI2C() : timer(nullptr) {
+static const lv_color_t kColOk  = lv_color_hex(0x1A7A4C); /* green */
+static const lv_color_t kColNg  = lv_color_hex(0xC9A227); /* yellow */
+static const lv_color_t kColDis = lv_color_hex(0xFF4444); /* red — Cam only */
+
+AppI2C::AppI2C() {
 }
 
 AppI2C::~AppI2C() {
@@ -16,13 +28,9 @@ void AppI2C::onViewLoad() {
     LV_LOG_USER(__func__);
     View.Create(_root);
 
-    AttachEvent(_root);
     AttachEvent(View.ui.imgbtn_home, LV_EVENT_CLICKED);
     AttachEvent(View.ui.imgbtn_next, LV_EVENT_CLICKED);
-    AttachEvent(View.ui.btn_top_center, LV_EVENT_CLICKED);
-    AttachEvent(View.ui.btn_scan_again, LV_EVENT_CLICKED);
-
-    port_index = 0;
+    AttachEvent(View.ui.btn_recheck, LV_EVENT_CLICKED);
 }
 
 void AppI2C::onViewDidLoad() {
@@ -31,13 +39,7 @@ void AppI2C::onViewDidLoad() {
 
 void AppI2C::onViewWillAppear() {
     LV_LOG_USER(__func__);
-
-    scan_flag = true;
-    timer     = lv_timer_create(onTimerUpdate, 1000, this);
-
-    M5.In_I2C.bitOff(AW9523_ADDR, 0x02, 0b100000, 100000L);
-    M5.In_I2C.bitOn(AW9523_ADDR, 0x02, 0b000010, 100000L);
-    M5.In_I2C.bitOn(AW9523_ADDR, 0x03, 0b10000000, 100000L);  // BOOST_EN
+    runCheckAndShow();
 }
 
 void AppI2C::onViewDidAppear() {
@@ -50,12 +52,10 @@ void AppI2C::onViewWillDisappear() {
 
 void AppI2C::onViewDidDisappear() {
     LV_LOG_USER(__func__);
-    lv_timer_del(timer);
 }
 
 void AppI2C::onViewUnload() {
     LV_LOG_USER(__func__);
-
     View.Delete();
 }
 
@@ -70,60 +70,52 @@ void AppI2C::AttachEvent(lv_obj_t* obj, lv_event_code_t code) {
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
 }
 
-void AppI2C::Update() {
-    if (scan_flag) {
-        bool addrs[120];
-
-        switch (port_index) {
-            case 0:
-                M5.In_I2C.scanID(addrs);
-                break;
-            case 1:
-                M5.Ex_I2C.begin(EXT_I2C_PORT, PORTA_PIN_1, PORTA_PIN_0);
-                M5.Ex_I2C.scanID(addrs);
-                M5.Ex_I2C.release();
-                break;
-            case 2:
-                M5.Ex_I2C.begin(EXT_I2C_PORT, PORTB_PIN_1, PORTB_PIN_0);
-                M5.Ex_I2C.scanID(addrs);
-                M5.Ex_I2C.release();
-                break;
-            case 3:
-                M5.Ex_I2C.begin(EXT_I2C_PORT, PORTC_PIN_1, PORTC_PIN_0);
-                M5.Ex_I2C.scanID(addrs);
-                M5.Ex_I2C.release();
-                break;
-            default:
-                break;
-        }
-
-        bool has_addr = false;
-        for (size_t i = 0; i < 120; i++) {
-            if (addrs[i]) {
-                lv_obj_t* label = lv_label_create(View.ui.cont_addr);
-                lv_label_set_text_fmt(label, "%02X", i);
-                lv_obj_set_pos(label, 33 + 18 * (i % 0x10),
-                               29 + 18 * (i / 0x10));
-                has_addr = true;
-            }
-        }
-
-        if (has_addr) {
-            lv_obj_add_flag(View.ui.label_notice, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_label_set_text(View.ui.label_notice,
-                              "No device found, click to "
-                              "scan again");
-            lv_obj_clear_flag(View.ui.label_notice, LV_OBJ_FLAG_HIDDEN);
-        }
-        scan_flag = false;
-    }
+static void addRow(lv_obj_t* parent, const char* name, bool ok) {
+    char buf[40];
+    snprintf(buf, sizeof(buf), "%-5s: %s", name, ok ? "OK" : "NG");
+    lv_obj_t* lab = lv_label_create(parent);
+    lv_label_set_text(lab, buf);
+    lv_obj_set_style_text_color(lab, ok ? kColOk : kColNg, 0);
 }
 
-void AppI2C::onTimerUpdate(lv_timer_t* timer) {
-    AppI2C* instance = (AppI2C*)timer->user_data;
+static void addCamDisabled(lv_obj_t* parent) {
+    lv_obj_t* lab = lv_label_create(parent);
+    lv_label_set_text(lab, "Cam  : Disabled");
+    lv_obj_set_style_text_color(lab, kColDis, 0);
+}
 
-    instance->Update();
+/** Light IMU presence: BMI270 chip-id on internal I2C @ 0x69. */
+static bool checkImu() {
+    uint8_t id = 0;
+    /* Reg 0x00 = chip id; BMI270 → 0x24 */
+    if (!M5.In_I2C.readRegister(BMI270_ADDR, 0x00, &id, 1, 100000L)) {
+        return false;
+    }
+    return id == 0x24;
+}
+
+/**
+ * Live probe Roller on Port A (0x64). Do NOT use g_mower.ready —
+ * that flag is latched at App_Init and stays true after unplug.
+ */
+static bool checkBldcLive() {
+    Wire.beginTransmission((uint8_t)ROLLER_I2C_ADDR);
+    return Wire.endTransmission() == 0;
+}
+
+void AppI2C::runCheckAndShow() {
+    lv_obj_clean(View.ui.cont_list);
+
+    const bool bldc = checkBldcLive();
+    const bool wifi = (WiFi.status() == WL_CONNECTED);
+    const bool sd   = SdCardPresent();
+    const bool imu  = checkImu();
+
+    addRow(View.ui.cont_list, "BLDC", bldc);
+    addRow(View.ui.cont_list, "WiFi", wifi);
+    addRow(View.ui.cont_list, "SD", sd);
+    addRow(View.ui.cont_list, "IMU", imu);
+    addCamDisabled(View.ui.cont_list);
 }
 
 void AppI2C::onEvent(lv_event_t* event) {
@@ -132,40 +124,23 @@ void AppI2C::onEvent(lv_event_t* event) {
 
     lv_obj_t* obj        = lv_event_get_current_target(event);
     lv_event_code_t code = lv_event_get_code(event);
+    if (code != LV_EVENT_CLICKED) {
+        return;
+    }
 
-    if (obj == instance->_root) {
-        if (code == LV_EVENT_SHORT_CLICKED || code == LV_EVENT_LEAVE) {
-            // instance->_Manager->Pop();
-        }
-    } else {
-        if (code == LV_EVENT_CLICKED) {
-            M5.Speaker.playWav(
-                (const uint8_t*)ResourcePool::GetWav("select_0_5s"), ~0u, 1, 1);
-            if (obj == instance->View.ui.imgbtn_home) {
-                instance->_Manager->Replace("Pages/HomeMenu");
-            } else if (obj == instance->View.ui.imgbtn_next) {
-                USBSerial.print("AppI2C -> AppMower\r\n");
-                instance->_Manager->Replace("Pages/AppMower");
-            } else if (obj == instance->View.ui.btn_top_center) {
-                instance->port_index += 1;
-                if (instance->port_index >= 4) {
-                    instance->port_index = 0;
-                }
-                instance->View.ChangeBgImg(instance->port_index);
-                lv_label_set_text(instance->View.ui.label_notice,
-                                  "Scan I2C Devices...");
-                lv_obj_clear_flag(instance->View.ui.label_notice,
-                                  LV_OBJ_FLAG_HIDDEN);
-                lv_obj_clean(instance->View.ui.cont_addr);
-                instance->scan_flag = true;
-            } else if (obj == instance->View.ui.btn_scan_again) {
-                instance->scan_flag = true;
-                lv_label_set_text(instance->View.ui.label_notice,
-                                  "Scan I2C Devices...");
-                lv_obj_clear_flag(instance->View.ui.label_notice,
-                                  LV_OBJ_FLAG_HIDDEN);
-                lv_obj_clean(instance->View.ui.cont_addr);
-            }
-        }
+    M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"), ~0u,
+                       1, 1);
+
+    if (obj == instance->View.ui.imgbtn_home) {
+        instance->_Manager->Replace("Pages/HomeMenu");
+        return;
+    }
+    if (obj == instance->View.ui.imgbtn_next) {
+        USBSerial.println("AppI2C(SelfCheck) -> AppMower");
+        instance->_Manager->Replace("Pages/AppMower");
+        return;
+    }
+    if (obj == instance->View.ui.btn_recheck) {
+        instance->runCheckAndShow();
     }
 }
