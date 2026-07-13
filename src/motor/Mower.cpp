@@ -64,7 +64,7 @@ bool Mower::begin()
     if (!roller_.begin(&Wire, ROLLER_I2C_ADDR, ROLLER_I2C_SDA, ROLLER_I2C_SCL,
                        ROLLER_I2C_HZ)) {
         mode_ok_ = false;
-        MOWER_LOG.println("[ERR] Roller I2C not found. UI/serial still work.");
+        MOWER_LOG.println("[Mow] [ERR] Roller I2C not found. UI/serial still work.");
         return false;
     }
 
@@ -83,7 +83,7 @@ bool Mower::begin()
     resetEnergy();
     updateRgb();
 
-    MOWER_LOG.printf("[OK] Mower ready  maxI=%d batt=%.0fmAh\n",
+    MOWER_LOG.printf("[Mow] [OK] Mower ready  maxI=%d batt=%.0fmAh\n",
                      SPEED_MAX_CURRENT, (double)BATTERY_CAP_MAH);
     return true;
 }
@@ -117,17 +117,18 @@ void Mower::stop(const char* reason)
     if (ready_) {
         updateRgb();
     }
-    MOWER_LOG.printf("[STOP] %s\n", reason ? reason : "");
+    MOWER_LOG.printf("[Mow] [STOP] %s\n", reason ? reason : "");
 }
 
 void Mower::start()
 {
     if (!ready_) {
-        MOWER_LOG.println("[START] blocked: roller not ready");
+        MOWER_LOG.println("[Mow] [START] blocked: roller not ready");
         return;
     }
     if (fault_) {
-        MOWER_LOG.println("[START] blocked: fault latched, press 'r' to clear");
+        MOWER_LOG.println(
+            "[Mow] [START] blocked: fault latched, press 'r' to clear");
         return;
     }
     ensureSpeedMode();
@@ -138,7 +139,7 @@ void Mower::start()
     running_    = true;
     soft_stall_ = 0;
     updateRgb();
-    MOWER_LOG.printf("[START] ramp to %s %d%% tgt=%ld\n", gearName(gear_),
+    MOWER_LOG.printf("[Mow] [START] ramp to %s %d%% tgt=%ld\n", gearName(gear_),
                      gearPct(gear_), (long)target_);
 }
 
@@ -158,7 +159,7 @@ void Mower::setGear(int g)
     }
     gear_   = g;
     target_ = speedForGear(gear_);
-    MOWER_LOG.printf("[GEAR] %s %d%% tgt=%ld cmd=%ld\n", gearName(gear_),
+    MOWER_LOG.printf("[Mow] [GEAR] %s %d%% tgt=%ld cmd=%ld\n", gearName(gear_),
                      gearPct(gear_), (long)target_, (long)cmd_);
 }
 
@@ -175,7 +176,7 @@ void Mower::eStop()
     if (ready_) {
         updateRgb();
     }
-    MOWER_LOG.println("[E-STOP] latched. Press 'r' / Reset to clear.");
+    MOWER_LOG.println("[Mow] [E-STOP] latched. Press 'r' / Reset to clear.");
 }
 
 void Mower::clearFault()
@@ -195,7 +196,8 @@ void Mower::clearFault()
     if (ready_) {
         updateRgb();
     }
-    MOWER_LOG.println("[FAULT] cleared. Press 't' to start. ('b' = full SOC)");
+    MOWER_LOG.println(
+        "[Mow] [FAULT] cleared. Press 't' to start. ('b' = full SOC)");
 }
 
 void Mower::resetEnergy()
@@ -205,7 +207,7 @@ void Mower::resetEnergy()
     batt_used_mah_    = 0;
     batt_soc_pct_     = 100.0f;
     batt_low_ = false;
-    MOWER_LOG.printf("[BATT] reset full  cap=%.0fmAh SOC=100%%\n",
+    MOWER_LOG.printf("[Mow] [BATT] reset full  cap=%.0fmAh SOC=100%%\n",
                      (double)BATTERY_CAP_MAH);
 }
 
@@ -288,7 +290,7 @@ void Mower::update()
         if (!fault_) {
             fault_ = true;
             stop(err_ == ERR_JAM ? "HW jam (err=2)" : "sys error");
-            MOWER_LOG.printf("[FAULT] err=%u sys=%u\n", err_, sys_);
+            MOWER_LOG.printf("[Mow] [FAULT] err=%u sys=%u\n", err_, sys_);
         }
     }
     if (err_ == ERR_OVERVOLTAGE) {
@@ -349,7 +351,8 @@ void Mower::updatePowerAndBattery(float dt_s)
     if (batt_low_ && !fault_) {
         fault_ = true;
         stop("battery low SOC");
-        MOWER_LOG.printf("[BATT] low SOC=%.1f%% — latched\n", (double)batt_soc_pct_);
+        MOWER_LOG.printf("[Mow] [BATT] low SOC=%.1f%% — latched\n",
+                         (double)batt_soc_pct_);
     }
 #endif
 }
@@ -425,7 +428,7 @@ void Mower_poll()
             /* ~11 fields from Status for serial debug (one line) */
             /* rpm/tgt in RPM (target_raw is x100). */
             MOWER_LOG.printf(
-                "run=%d rpm=%.0f tgt=%.0f gear=%d I=%.1f V=%.2f P=%.2fW "
+                "[Mow] run=%d rpm=%.0f tgt=%.0f gear=%d I=%.1f V=%.2f P=%.2fW "
                 "soc=%.1f%% used=%.1fmAh load=%s fault=%d ramp=%d\n",
                 s.running ? 1 : 0, (double)s.speed,
                 (double)s.target_raw / (double)SCALE_SPEED_DIV, s.gear,
@@ -474,7 +477,7 @@ void Mower_handleSerial()
             case 'S': {
                 const Mower::Status s = g_mower.status();
                 MOWER_LOG.printf(
-                    "ready=%d run=%d SOC=%.1f%% P=%.2fW V=%.2f I=%.1f "
+                    "[Mow] ready=%d run=%d SOC=%.1f%% P=%.2fW V=%.2f I=%.1f "
                     "used=%.1f fault=%d low=%d\n",
                     s.ready ? 1 : 0, s.running ? 1 : 0, s.batt_soc_pct, s.batt_power_w,
                     s.vin, s.current, s.batt_used_mah, s.fault ? 1 : 0,
@@ -484,8 +487,8 @@ void Mower_handleSerial()
             case 'h':
             case 'H':
             case '?':
-                MOWER_LOG.println("---- Mower (UI) ----");
-                MOWER_LOG.println("  t 1/2/3 e r b s h");
+                MOWER_LOG.println("[Mow] ---- Mower (UI) ----");
+                MOWER_LOG.println("[Mow]   t 1/2/3 e r b s h");
                 break;
             default:
                 break;

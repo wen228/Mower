@@ -31,7 +31,7 @@ void SdLogger::ensureTimeBase_() {
     }
     millis0_      = millis();
     time_base_ok_ = true;
-    USBSerial.printf("[LOG] t base wall_ms=%llu millis0=%u (RTC once)\n",
+    USBSerial.printf("[SD] t base wall_ms=%llu millis0=%u (RTC once)\n",
                      (unsigned long long)wall_ms0_, (unsigned)millis0_);
 }
 
@@ -46,12 +46,12 @@ bool SdLogger::start() {
     ensureTimeBase_();
     if (!SdCardPresent()) {
         snprintf(status_, sizeof(status_), "Log: no card");
-        USBSerial.println("[LOG] start fail: no card");
+        USBSerial.println("[SD] start fail: no card");
         return false;
     }
     if (!held_mount_ && !SdMount()) {
         snprintf(status_, sizeof(status_), "Log: mount fail");
-        USBSerial.println("[LOG] start fail: mount");
+        USBSerial.println("[SD] start fail: mount");
         return false;
     }
     held_mount_ = true;
@@ -82,7 +82,7 @@ void SdLogger::stop() {
         }
         snprintf(status_, sizeof(status_), "Log: STOP");
     }
-    USBSerial.println("[LOG] stop");
+    USBSerial.println("[SD] stop");
 }
 
 void SdLogger::releaseMountAfterUpload() {
@@ -124,7 +124,7 @@ bool SdLogger::openNewFile() {
     file_ = SD.open(path_, FILE_WRITE);
     if (!file_) {
         snprintf(status_, sizeof(status_), "Log: open fail");
-        USBSerial.printf("[LOG] open %s FAIL\n", path_);
+        USBSerial.printf("[SD] open %s FAIL\n", path_);
         return false;
     }
 
@@ -134,7 +134,7 @@ bool SdLogger::openNewFile() {
     file_open_ = true;
     lines_     = 0;
     snprintf(status_, sizeof(status_), "REC %s n=0", path_);
-    USBSerial.printf("[LOG] REC %s\n", path_);
+    USBSerial.printf("[SD] REC %s\n", path_);
     return true;
 }
 
@@ -164,7 +164,7 @@ void SdLogger::closeFile() {
     file_.flush();
     file_.close();
     file_open_ = false;
-    USBSerial.printf("[LOG] closed %s lines=%lu\n", path_,
+    USBSerial.printf("[SD] closed %s lines=%lu\n", path_,
                      (unsigned long)lines_);
 }
 

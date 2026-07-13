@@ -181,7 +181,7 @@ void AppMower::onEvent(lv_event_t* event) {
     if (obj == instance->View.ui.imgbtn_next) {
         M5.Speaker.playWav((const uint8_t*)ResourcePool::GetWav("select_0_5s"),
                            ~0u, 1, 1);
-        USBSerial.println("AppMower -> AppBattery");
+        USBSerial.println("[Mow] AppMower -> AppBattery");
         instance->_Manager->Replace("Pages/AppBattery");
         return;
     }
