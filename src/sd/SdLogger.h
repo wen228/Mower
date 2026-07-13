@@ -26,6 +26,9 @@ public:
     /** Call every loop after Mower_poll; writes only while recording. */
     void poll();
 
+    /** After RTOS CSV upload: drop held mount if not recording. */
+    void releaseMountAfterUpload();
+
 private:
     bool openNewFile();
     void writeRow();

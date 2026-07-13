@@ -9,7 +9,7 @@
 #include "sd/SdMount.h"
 #include "motor/Mower.h"
 #include "config_mower.h"
-#include "cloud/EzData2Client.h"
+#include "cloud/NetUpload.h"
 
 SdLogger g_sd_logger;
 
@@ -70,21 +70,26 @@ bool SdLogger::start() {
 
 void SdLogger::stop() {
     closeFile();
-    /* Upload while SD still mounted (unmount would block open). */
+    /* Keep SD mounted; netWorker task uploads then releaseMountAfterUpload. */
     if (path_[0] != '\0' && lines_ > 0) {
-        g_ez2.uploadLogFile(path_);
-    }
-    if (held_mount_) {
-        SdUnmount();
-        held_mount_ = false;
-    }
-    if (path_[0] != '\0' && lines_ > 0) {
+        NetUpload_request(path_);
         snprintf(status_, sizeof(status_), "saved %s n=%lu", path_,
                  (unsigned long)lines_);
     } else {
+        if (held_mount_) {
+            SdUnmount();
+            held_mount_ = false;
+        }
         snprintf(status_, sizeof(status_), "Log: STOP");
     }
     USBSerial.println("[LOG] stop");
+}
+
+void SdLogger::releaseMountAfterUpload() {
+    if (held_mount_ && !file_open_) {
+        SdUnmount();
+        held_mount_ = false;
+    }
 }
 
 void SdLogger::toggle() {

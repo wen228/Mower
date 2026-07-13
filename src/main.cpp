@@ -15,6 +15,7 @@
 #include "motor/Mower.h"
 #include "sd/SdLogger.h"
 #include "cloud/EzData2Client.h"
+#include "cloud/NetUpload.h"
 
 void setup() {
     esp_err_t ret = nvs_flash_init();
@@ -52,6 +53,7 @@ void setup() {
     App_Init();
     /* Boot WiFi (non-block) + cloud client; token empty → MQTT skip only */
     g_ez2.begin();
+    NetUpload_begin(); /* FreeRTOS worker for CSV HTTP upload */
 }
 
 void loop() {
