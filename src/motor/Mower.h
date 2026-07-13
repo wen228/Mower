@@ -45,6 +45,8 @@ public:
         float batt_soc_pct;
         float batt_used_mah;
         bool batt_low;
+        /** Last latch reason for UI tips (empty if none). */
+        const char* fault_reason;
     };
 
     bool begin();
@@ -75,6 +77,7 @@ private:
     int32_t target_ = SPEED_GEAR_ECO;
     int32_t cmd_  = 0;
     int soft_stall_ = 0;
+    char fault_reason_[48] = "";
 
     float speed_   = 0;
     float current_ = 0;

@@ -67,17 +67,50 @@ void AppMower::AttachEvent(lv_obj_t* obj, lv_event_code_t code) {
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
 }
 
+/** Demo fault tips for UI only (serial logs unchanged). */
+static void faultTip(const char* reason, const char** title, const char** tip) {
+    static const struct {
+        const char* key;
+        const char* title;
+        const char* tip;
+    } kMap[] = {
+        /* English until CJK font includes tip glyphs (see note to user). */
+        {"soft stall", "Soft stall", "Lift blade / clear grass, then Reset"},
+        {"HW jam", "HW jam", "Power off, free blade, then Reset"},
+        {"overvoltage", "Overvoltage", "Check 12V supply, then Reset"},
+        {"sys error", "Sys error", "Replug Roller / reboot, Reset"},
+        {"battery low", "Low battery", "Stop work or recharge (sim)"},
+        {"E-STOP", "E-STOP", "Press Reset, then RUN"},
+    };
+    *title = "Fault";
+    *tip   = "Press Reset, then RUN";
+    if (!reason || !reason[0]) {
+        return;
+    }
+    for (size_t i = 0; i < sizeof(kMap) / sizeof(kMap[0]); i++) {
+        if (strstr(reason, kMap[i].key)) {
+            *title = kMap[i].title;
+            *tip   = kMap[i].tip;
+            return;
+        }
+    }
+}
+
 void AppMower::Update() {
     const Mower::Status s = Model.status();
     const int pct = Mower::gearPct(s.gear ? s.gear : GEAR_ECO);
 
-    char status[64];
+    char status[72];
     if (!s.ready) {
         snprintf(status, sizeof(status), "NO ROLLER | %s %d%%",
                  Mower::gearName(s.gear ? s.gear : GEAR_ECO), pct);
     } else if (s.fault) {
-        snprintf(status, sizeof(status), "FAULT | %s %d%% | %s",
-                 Mower::gearName(s.gear), pct, s.running ? "RUN" : "STOP");
+        const char* title = "Fault";
+        const char* tip   = "";
+        faultTip(s.fault_reason, &title, &tip);
+        (void)tip;
+        snprintf(status, sizeof(status), "FAULT: %s | %s %d%%", title,
+                 Mower::gearName(s.gear), pct);
     } else {
         snprintf(status, sizeof(status), "%s | %s %d%%",
                  s.running ? "RUN" : "STOP", Mower::gearName(s.gear), pct);
@@ -86,15 +119,36 @@ void AppMower::Update() {
     lv_obj_set_style_text_color(
         View.ui.label_status,
         s.fault ? lv_color_hex(0xFF4444)
-                : (s.running ? lv_color_hex(0x00FF88) : lv_color_hex(0xFFCC00)),
+                : (!s.ready ? lv_color_hex(0xFF4444)
+                            : (s.running ? lv_color_hex(0x00FF88)
+                                         : lv_color_hex(0xFFCC00))),
         0);
 
-    char telem[128];
-    snprintf(telem, sizeof(telem),
-             "Spd:%.1f  I:%.1f  Vin:%.2f\nLoad:%s  P:%.2fW  SOC:%.0f%%",
-             s.speed, s.current, s.vin, Mower::loadName(s.load), s.batt_power_w,
-             s.batt_soc_pct);
+    char telem[160];
+    const bool tip_red = !s.ready || s.fault;
+    if (!s.ready) {
+        snprintf(telem, sizeof(telem),
+                 "Check Port A I2C + motor power\n"
+                 "Spd:--  I:--  SOC:%.0f%%",
+                 s.batt_soc_pct);
+    } else if (s.fault) {
+        const char* title = "Fault";
+        const char* tip   = "Press Reset, then RUN";
+        faultTip(s.fault_reason, &title, &tip);
+        snprintf(telem, sizeof(telem),
+                 "%s\nSpd:%.0f  I:%.1f  SOC:%.0f%%", tip, (double)s.speed,
+                 (double)s.current, (double)s.batt_soc_pct);
+    } else {
+        snprintf(telem, sizeof(telem),
+                 "Spd:%.0f  I:%.1f  Vin:%.2f\nLoad:%s  P:%.2fW  SOC:%.0f%%",
+                 (double)s.speed, (double)s.current, (double)s.vin,
+                 Mower::loadName(s.load), (double)s.batt_power_w,
+                 (double)s.batt_soc_pct);
+    }
     lv_label_set_text(View.ui.label_telem, telem);
+    lv_obj_set_style_text_color(
+        View.ui.label_telem,
+        tip_red ? lv_color_hex(0xFF4444) : lv_color_hex(0x333333), 0);
 
     /* Short labels — RUN/E-STOP/Reset share one row. */
     if (View.ui.label_toggle) {

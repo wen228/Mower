@@ -110,6 +110,10 @@ void Mower::stop(const char* reason)
     running_    = false;
     cmd_        = 0;
     soft_stall_ = 0;
+    /* Keep reason for AppMower tips when already latched (log text unchanged). */
+    if (fault_ && reason && reason[0] != '\0') {
+        snprintf(fault_reason_, sizeof(fault_reason_), "%s", reason);
+    }
     if (ready_) {
         updateRgb();
     }
@@ -167,6 +171,7 @@ void Mower::eStop()
     cmd_        = 0;
     soft_stall_ = 0;
     fault_      = true;
+    snprintf(fault_reason_, sizeof(fault_reason_), "E-STOP");
     if (ready_) {
         updateRgb();
     }
@@ -186,6 +191,7 @@ void Mower::clearFault()
     fault_      = false;
     soft_stall_ = 0;
     mode_ok_    = false;
+    fault_reason_[0] = '\0';
     if (ready_) {
         updateRgb();
     }
@@ -395,6 +401,7 @@ Mower::Status Mower::status() const
     s.batt_soc_pct          = batt_soc_pct_;
     s.batt_used_mah         = batt_used_mah_;
     s.batt_low      = batt_low_;
+    s.fault_reason  = fault_reason_;
     return s;
 }
 

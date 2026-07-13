@@ -62,6 +62,8 @@ void AppMowerView::Create(lv_obj_t* root) {
     lv_label_set_text(ui.label_telem, "Spd:--  I:--  Vin:--\nLoad:--  P:--  SOC:--");
     lv_obj_set_style_text_color(ui.label_telem, lv_color_hex(0x333333), 0);
     lv_obj_set_pos(ui.label_telem, 12, kBannerH + 24);
+    lv_label_set_long_mode(ui.label_telem, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(ui.label_telem, 296);
 
     /* Gear row */
     lv_color_t gear_bg = lv_color_hex(0x3A5FCD);
