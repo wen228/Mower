@@ -1,12 +1,12 @@
 /*
  * EspNow_Telem_Slave — AtomS3R + Atomic Display Base
- * ESP-NOW RX + big-text dashboard (M5Unified / M5AtomDisplay).
+ * ESP-NOW RX + dashboard (M5Unified / M5AtomDisplay).
  *
  * Board: AtomS3R | Libraries: M5Unified, M5GFX
  * Docs: https://docs.m5stack.com/en/arduino/projects/atomic/atomic_display_base
  *
- * Channel MUST match CoreS3 [ESP] log "ch=N" (WiFi AP → often 11; offline fallback 6).
- * Payload ver=2 includes tgt RPM (closed-loop setpoint).
+ * Channel MUST match CoreS3 [ESP] log "ch=N".
+ * Payload ver=2 includes tgt RPM.
  */
 
 #include <M5AtomDisplay.h>
@@ -15,13 +15,17 @@
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <string.h>
+#include <stdio.h>
 
 /* Match CoreS3 serial: [ESP] ... ch=?? */
 #define ESPNOW_CHANNEL 11
 
-/* UI + Serial refresh (ms). RX is event-driven; display is 1 Hz. */
+/* UI + Serial refresh (ms). RX is event-driven. */
 #define UI_PERIOD_MS 1000
 #define LINK_LOST_MS 2500
+
+/* Fixed size — height/14 on 1080p was ~12, far too large. */
+#define UI_TEXT_SIZE 3
 
 #define ESPNOW_TELEM_MAGIC 0x4D57
 #define ESPNOW_TELEM_VER   2
@@ -35,8 +39,8 @@ struct __attribute__((packed)) EspNowTelem {
   uint8_t  ver;
   uint8_t  flags;
   uint32_t seq;
-  int16_t  speed;      /* measured RPM */
-  int16_t  tgt;        /* target RPM */
+  int16_t  speed;
+  int16_t  tgt;
   int16_t  current_mA;
   int16_t  vin_x100;
   int16_t  power_x100;
@@ -49,6 +53,12 @@ static volatile uint32_t s_rx = 0;
 static volatile uint32_t s_last_rx_ms = 0;
 static EspNowTelem s_last;
 static bool s_have = false;
+
+/* Last painted state — skip full repaint when unchanged. */
+static uint32_t s_drawn_seq = 0xFFFFFFFFu;
+static uint8_t  s_drawn_flags = 0xFF;
+static bool     s_drawn_lost = true;
+static bool     s_screen_cleared = false;
 
 static const char* gearName(uint8_t g) {
   switch (g) {
@@ -70,7 +80,6 @@ static const char* loadName(uint8_t L) {
   }
 }
 
-/* Arduino-ESP32 3.x / IDF 5 recv cb */
 void onRecv(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
   (void)info;
   if (len < (int)sizeof(EspNowTelem)) {
@@ -87,94 +96,106 @@ void onRecv(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
   s_last_rx_ms = millis();
 }
 
-static void drawWaiting(const char* msg) {
-  M5.Display.fillScreen(TFT_BLACK);
-  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.Display.setCursor(20, 40);
-  M5.Display.println("MOWER");
-  M5.Display.setTextColor(TFT_ORANGE, TFT_BLACK);
-  M5.Display.setCursor(20, 120);
-  M5.Display.println(msg);
+/* One line: fixed cursor, black bg text (no full-screen clear). */
+static void lineAt(int x, int y, uint16_t fg, const char* s) {
+  M5.Display.setTextColor(fg, TFT_BLACK);
+  M5.Display.setCursor(x, y);
+  /* Pad so shorter strings erase leftovers from longer previous text. */
+  M5.Display.printf("%-48s", s);
 }
 
-static void drawDashboard(const EspNowTelem& t, uint32_t age_ms) {
+static void drawWaiting(const char* msg) {
+  if (!s_screen_cleared) {
+    M5.Display.fillScreen(TFT_BLACK);
+    s_screen_cleared = true;
+  }
+  const int step = M5.Display.fontHeight() + 6;
+  lineAt(24, 40, TFT_CYAN, "MOWER");
+  lineAt(24, 40 + step, TFT_ORANGE, msg);
+  s_drawn_seq = 0xFFFFFFFFu;
+  s_drawn_lost = true;
+}
+
+static void drawDashboard(const EspNowTelem& t, uint32_t age_ms, bool force) {
   const bool fault   = (t.flags & ESPNOW_F_FAULT) != 0;
   const bool running = (t.flags & ESPNOW_F_RUNNING) != 0;
   const bool lost    = age_ms > LINK_LOST_MS;
 
-  M5.Display.fillScreen(TFT_BLACK);
+  /* Skip heavy redraw when nothing meaningful changed (link age only). */
+  if (!force && !lost && !s_drawn_lost && t.seq == s_drawn_seq &&
+      t.flags == s_drawn_flags) {
+    return;
+  }
 
-  int y = 24;
-  const int step = M5.Display.fontHeight() + 8;
+  if (!s_screen_cleared) {
+    M5.Display.fillScreen(TFT_BLACK);
+    s_screen_cleared = true;
+  }
 
-  M5.Display.setTextColor(TFT_CYAN, TFT_BLACK);
-  M5.Display.setCursor(20, y);
-  M5.Display.print("MOWER");
+  const int x = 24;
+  const int step = M5.Display.fontHeight() + 6;
+  int y = 28;
+  char buf[64];
+
+  M5.Display.startWrite();
+
+  lineAt(x, y, TFT_CYAN, "MOWER");
   y += step;
 
   if (lost) {
-    M5.Display.setTextColor(TFT_ORANGE, TFT_BLACK);
-    M5.Display.setCursor(20, y);
-    M5.Display.print("LINK LOST");
+    lineAt(x, y, TFT_ORANGE, "LINK LOST");
   } else if (fault) {
-    M5.Display.setTextColor(TFT_RED, TFT_BLACK);
-    M5.Display.setCursor(20, y);
-    M5.Display.printf("FAULT | %s", gearName(t.gear));
+    snprintf(buf, sizeof(buf), "FAULT | %s", gearName(t.gear));
+    lineAt(x, y, TFT_RED, buf);
   } else if (running) {
-    M5.Display.setTextColor(TFT_GREEN, TFT_BLACK);
-    M5.Display.setCursor(20, y);
-    M5.Display.printf("RUN | %s", gearName(t.gear));
+    snprintf(buf, sizeof(buf), "RUN | %s", gearName(t.gear));
+    lineAt(x, y, TFT_GREEN, buf);
   } else {
-    M5.Display.setTextColor(TFT_YELLOW, TFT_BLACK);
-    M5.Display.setCursor(20, y);
-    M5.Display.printf("STOP | %s", gearName(t.gear));
+    snprintf(buf, sizeof(buf), "STOP | %s", gearName(t.gear));
+    lineAt(x, y, TFT_YELLOW, buf);
   }
   y += step;
 
-  M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);
-  M5.Display.setCursor(20, y);
-  M5.Display.printf("RPM  %d    TGT  %d", (int)t.speed, (int)t.tgt);
+  snprintf(buf, sizeof(buf), "RPM  %d    TGT  %d", (int)t.speed, (int)t.tgt);
+  lineAt(x, y, TFT_WHITE, buf);
   y += step;
 
-  M5.Display.setCursor(20, y);
-  /* current field is mA (same as AppMower I:). */
-  M5.Display.printf("I %.1fmA  Vin %.2f  P %.2fW",
-                    (double)t.current_mA, t.vin_x100 / 100.0,
-                    t.power_x100 / 100.0);
+  snprintf(buf, sizeof(buf), "I %.1fmA  Vin %.2f  P %.2fW",
+           (double)t.current_mA, t.vin_x100 / 100.0, t.power_x100 / 100.0);
+  lineAt(x, y, TFT_WHITE, buf);
   y += step;
 
-  M5.Display.setCursor(20, y);
-  M5.Display.printf("Load %s    SOC %.1f%%", loadName(t.load),
-                    t.soc_x10 / 10.0);
+  snprintf(buf, sizeof(buf), "Load %s    SOC %.1f%%", loadName(t.load),
+           t.soc_x10 / 10.0);
+  lineAt(x, y, TFT_WHITE, buf);
   y += step;
 
-  M5.Display.setTextColor(TFT_DARKGREY, TFT_BLACK);
-  M5.Display.setCursor(20, y);
-  M5.Display.printf("link seq %lu  age %.1fs  rx %lu",
-                    (unsigned long)t.seq, age_ms / 1000.0,
-                    (unsigned long)s_rx);
+  snprintf(buf, sizeof(buf), "link seq %lu  age %.1fs  rx %lu",
+           (unsigned long)t.seq, age_ms / 1000.0, (unsigned long)s_rx);
+  lineAt(x, y, TFT_DARKGREY, buf);
+
+  M5.Display.endWrite();
+
+  s_drawn_seq   = t.seq;
+  s_drawn_flags = t.flags;
+  s_drawn_lost  = lost;
 }
 
 void setup() {
   auto cfg = M5.config();
   cfg.external_display.atom_display = true;
-  /* Change if your monitor needs another mode. */
-  cfg.atom_display.logical_width  = 1920;
-  cfg.atom_display.logical_height = 1080;
+  /*
+   * Lower logical res = less HDMI pixel work than 1920x1080 fill.
+   * Monitor must accept scaled modes (see Atomic Display Base docs).
+   */
+  cfg.atom_display.logical_width  = 1280;
+  cfg.atom_display.logical_height = 720;
   M5.begin(cfg);
 
   M5.setPrimaryDisplayType({m5::board_t::board_M5AtomDisplay});
+  M5.Display.setTextSize(UI_TEXT_SIZE);
+  M5.Display.setTextWrap(false);
 
-  {
-    int ts = M5.Display.height() / 14;
-    if (ts < 4) {
-      ts = 4;
-    }
-    if (ts > 12) {
-      ts = 12;
-    }
-    M5.Display.setTextSize(ts);
-  }
   drawWaiting("waiting ESP-NOW...");
 
   Serial.begin(115200);
@@ -194,8 +215,9 @@ void setup() {
   Serial.println("EspNow_Telem_Slave");
   Serial.print("MAC ");
   Serial.println(WiFi.macAddress());
-  Serial.printf("Listen ch=%u  UI=%ums\n", (unsigned)WiFi.channel(),
-                (unsigned)UI_PERIOD_MS);
+  Serial.printf("Listen ch=%u  UI=%ums  text=%d  %dx%d\n",
+                (unsigned)WiFi.channel(), (unsigned)UI_PERIOD_MS, UI_TEXT_SIZE,
+                M5.Display.width(), M5.Display.height());
 }
 
 void loop() {
@@ -215,7 +237,7 @@ void loop() {
 
   EspNowTelem t = s_last;
   const uint32_t age = now - s_last_rx_ms;
-  drawDashboard(t, age);
+  drawDashboard(t, age, false);
 
   Serial.printf(
       "[ESP] seq=%lu run=%d fault=%d gear=%u rpm=%d tgt=%d I=%d Vin=%.2f "
