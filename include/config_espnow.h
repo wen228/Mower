@@ -8,9 +8,9 @@
 #define ESPNOW_ENABLE 1
 #endif
 
-/* Broadcast period (ms). 0.5 Hz — less RF contention with WiFi STA. */
+/* Broadcast period (ms). 1 Hz; AP_STA + pause-while-joining keeps WiFi OK. */
 #ifndef ESPNOW_TX_PERIOD_MS
-#define ESPNOW_TX_PERIOD_MS 2000
+#define ESPNOW_TX_PERIOD_MS 500
 #endif
 
 /* Used when STA is not associated (no AP channel yet). Slave must match. */

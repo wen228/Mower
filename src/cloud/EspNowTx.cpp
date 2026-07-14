@@ -136,7 +136,7 @@ void EspNowTx_poll() {
         USBSerial.printf("[ESP] send fail seq=%lu err=%d\n",
                          (unsigned long)p.seq, (int)e);
     } else if ((p.seq % 5u) == 0u) {
-        /* ~10 s at 0.5 Hz */
+        /* ~2.5 s at 2 Hz */
         USBSerial.printf("[ESP] seq=%lu run=%d rpm=%d tgt=%d soc=%.1f ch=%u\n",
                          (unsigned long)p.seq, (p.flags & ESPNOW_F_RUNNING) ? 1 : 0,
                          (int)p.speed, (int)p.tgt, (double)p.soc_x10 / 10.0,
