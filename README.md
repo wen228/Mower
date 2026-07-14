@@ -1,6 +1,6 @@
 # Smart Lawn Mower
 
-Smart Lawn Mower 是一款基于 BLDC 刀盘电机的园艺工具原型，意在模拟智能IoT的逻辑。
+Smart Lawn Mower 是一款基于 BLDC 刀盘电机的园艺工具原型，意在模拟器具的智能逻辑。
 其中，CoreS3负责闭环转速控制、负载感知、软启动与故障闩锁；本地 SD 记录运行数据，云端低频同步机队状态，并通过 ESP-NOW 无需wifi推到外接大屏。形成控制、监测与互联的完整演示。
 
 > 主代码在 `./src`，Atom 从机在 `./src_slave/EspNow_Telem_Slave.ino`。  
@@ -169,3 +169,10 @@ Atom：Arduino IDE 选 **AtomS3R**，打开 `EspNow_Telem_Slave`，库需 M5Unif
 #### 7.1 串口日志
 
 ![串口日志](./docs/pics/Demo_Serial.png)
+
+## TODO:
+1, 界限：增加与实际刀片的理解（功率10～20倍之差，BLDC模组无法实现，只模拟智能逻辑）  
+
+2，对BLDC(恒速控制,变换，开/闭环架构，模组源码)的理解。  
+
+3，文档+草稿整理：前期规划，开发日程等等。
