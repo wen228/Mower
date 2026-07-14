@@ -1,14 +1,16 @@
 ## M5CoreS3 & M5CoreS3SE User Demo
 
-You may encounter the "cam_task canary ..." error, please consider replacing the
-libesp32-camera.a(under pio package folder) to lib/libesp32-camera.a
-
-### How to change board
+角色	硬件	职责
+主控	CoreS3 (+ DinBase 12V 推荐)	电机业务、LVGL UI、SD、WiFi 云、ESP-NOW 发
+电机	Unit Roller Port A I2C 0x64	刀盘 BLDC（非导航）
+看板	AtomS3R + Atomic Display Base	ESP-NOW 收 + 外接屏大字看板
+供电注意	USB  alone 易 brownout	电机+WiFi 时用 12V DinBase
+### How to change boards
 
 1. Click PIO environment switch button
-    ![](./docs/pio_env_change.png)
+    ![](./pio_env_change.png)
 2. Select M5CoreS3 or M5CoreS3SE env
-    ![](./docs/pio_env_choose.png)
+    ![](./pio_env_choose.png)
 
 ### Build info:
 ```bash
