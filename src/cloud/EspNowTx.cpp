@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "espnow_telem.h"
+#include "config_ezdata2.h"
 #include "motor/Mower.h"
 
 static const uint8_t kBcast[ESP_NOW_ETH_ALEN] = {0xFF, 0xFF, 0xFF,
@@ -50,11 +51,14 @@ static bool addBcastPeer_() {
 }
 
 void EspNowTx_begin() {
-    WiFi.mode(WIFI_STA);
-    /* No AP yet → pin fallback channel so a slave on same ch can hear us. */
-    if (WiFi.status() != WL_CONNECTED) {
+    /* Same mode as EzData2: AP_STA coexists with ESP-NOW better than STA-only. */
+    WiFi.mode(WIFI_AP_STA);
+    /* Do NOT setChannel while STA is joining — that breaks association.
+     * Only pin fallback when no WiFi SSID (NOW-only bench). */
+    if (WiFi.status() != WL_CONNECTED && EZ2_WIFI_SSID[0] == '\0') {
         esp_wifi_set_channel(ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE);
     }
+    esp_wifi_set_ps(WIFI_PS_NONE);
 
     if (esp_now_init() != ESP_OK) {
         USBSerial.println("[ESP] init fail");
@@ -69,13 +73,17 @@ void EspNowTx_begin() {
     s_ok      = true;
     s_seq     = 0;
     s_last_ms = 0;
-    USBSerial.printf("[ESP] ready mac=%s ch=%u period=%ums\n",
+    USBSerial.printf("[ESP] ready mac=%s ch=%u period=%ums mode=AP_STA\n",
                      WiFi.macAddress().c_str(), (unsigned)WiFi.channel(),
                      (unsigned)ESPNOW_TX_PERIOD_MS);
 }
 
 void EspNowTx_poll() {
     if (!s_ok) {
+        return;
+    }
+    /* While STA is trying to join, skip TX so RF free for association. */
+    if (EZ2_WIFI_SSID[0] != '\0' && WiFi.status() != WL_CONNECTED) {
         return;
     }
     const uint32_t now = millis();
@@ -128,7 +136,7 @@ void EspNowTx_poll() {
         USBSerial.printf("[ESP] send fail seq=%lu err=%d\n",
                          (unsigned long)p.seq, (int)e);
     } else if ((p.seq % 5u) == 0u) {
-        /* ~5 s at 1 Hz */
+        /* ~10 s at 0.5 Hz */
         USBSerial.printf("[ESP] seq=%lu run=%d rpm=%d tgt=%d soc=%.1f ch=%u\n",
                          (unsigned long)p.seq, (p.flags & ESPNOW_F_RUNNING) ? 1 : 0,
                          (int)p.speed, (int)p.tgt, (double)p.soc_x10 / 10.0,

@@ -68,7 +68,8 @@ void EzData2Client::wifiKick_() {
     }
 
     USBSerial.printf("[EZ] wifi start ssid=%s (non-block)\n", EZ2_WIFI_SSID);
-    WiFi.mode(WIFI_STA);
+    /* AP_STA: better coexistence with ESP-NOW than pure STA on some stacks. */
+    WiFi.mode(WIFI_AP_STA);
     WiFi.setAutoReconnect(true);
     WiFi.begin(EZ2_WIFI_SSID, EZ2_WIFI_PASS);
     wifi_started_     = true;
